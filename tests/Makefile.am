@@ -1,5 +1,5 @@
 AM_CFLAGS = -std=gnu99 -Wall -pedantic -O3 -DUSE_ALLOCATORS -I ../src/ -L../lib/ 
-LDADD     = -lcollections -lcombinatorialsearch
+LDADD     = -lcollections -lgsearch
 
 
 bin_PROGRAMS = \

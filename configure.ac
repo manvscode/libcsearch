@@ -1,8 +1,8 @@
-AC_INIT([libcombinatorialsearch], [0.1], [manvscode@gmail.com], [libcombinatorialsearch], [http://www.manvscode.com/])
+AC_INIT([libgsearch], [0.1], [manvscode@gmail.com], [libgsearch], [http://www.manvscode.com/])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AM_SILENT_RULES([yes])
-AC_CONFIG_HEADERS([src/libcombinatorialsearch-config.h])
+AC_CONFIG_HEADERS([src/libgsearch-config.h])
 
 AC_PROG_CC
 AC_PROG_CC_C99
@@ -11,11 +11,11 @@ AC_HEADER_STDC
 
 
 AH_TOP([
-#ifndef _LIBCOMBINATORIALSEARCH_H_
-#define _LIBCOMBINATORIALSEARCH_H_
+#ifndef _LIBGSEARCH_H_
+#define _LIBGSEARCH_H_
 ])
 AH_BOTTOM([
-#endif /* _LIBCOMBINATORIALSEARCH_H_ */
+#endif /* _LIBGSEARCH_H_ */
 ])
 
 
