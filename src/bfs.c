@@ -25,24 +25,8 @@
 #include <libcollections/alloc.h>
 #include <libcollections/bheap.h>
 #include <libcollections/hash-map.h>
-#include "libgsearch-config.h"
-#include "gsearch.h"
-
-static boolean nop_fxn( void *data )
-{
-	return TRUE;
-}
-
-static int pointer_compare( const void* p_n1, const void* p_n2 )
-{
-	ptrdiff_t diff = p_n1 - p_n2;
-	return (int) diff;
-}
-
-static int bfs_node_compare( const void* p_n1, const void* p_n2 )
-{
-	return ((bfs_node_t*)p_n1)->h > ((bfs_node_t*)p_n2)->h;
-}
+#include <libcollections/tree-map.h>
+#include "csearch.h"
 
 struct bfs_node {
 	struct bfs_node* parent;
@@ -60,8 +44,29 @@ struct bfs_algorithm {
 	tree_map_t     closed_list; /* (state, bfs_node_t*) */
 };
 
+static boolean nop_fxn( void *data )
+{
+	return TRUE;
+}
+static boolean nop_keyval_fxn( void *key, void *value )
+{
+	return TRUE;
+}
+
+static int pointer_compare( const void* p_n1, const void* p_n2 )
+{
+	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
+	return (int) diff;
+}
+
+static int bfs_node_compare( const void* p_n1, const void* p_n2 )
+{
+	return ((bfs_node_t*)p_n1)->h > ((bfs_node_t*)p_n2)->h;
+}
+
+
 	
-bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
+bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of )
 {
 	bfs_t* p_bfs = (bfs_t*) malloc( sizeof(bfs_t) );
 
@@ -72,14 +77,14 @@ bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, success
 		p_bfs->node_path     = NULL;
 
 		bheap_create( &p_bfs->open_list, sizeof(bfs_node_t*)/*elem_size*/, 128, 
-					  (bheap_compare_function) bfs_node_compare, nop_fxn,
+					  (heap_compare_function) bfs_node_compare, nop_fxn,
 					  malloc, free );
 
 		hash_map_create( &p_bfs->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
-						 state_hasher, nop_fxn, pointer_compare, 
+						 state_hasher, nop_keyval_fxn, pointer_compare, 
 						 malloc, free );
 
-		tree_map_create( &p_bfs->closed_list, nop_fxn, pointer_compare, malloc, free );
+		tree_map_create( &p_bfs->closed_list, nop_keyval_fxn, pointer_compare, malloc, free );
 	}
 
 	return p_bfs;
@@ -93,7 +98,7 @@ void bfs_destroy( bfs_t** p_bfs )
 		bheap_destroy( &(*p_bfs)->open_list );		
 		hash_map_destroy( &(*p_bfs)->open_hash_map );		
 		tree_map_destroy( &(*p_bfs)->closed_list );		
-		(*p_bfs)->free( *p_bfs );
+		free( *p_bfs );
 		*p_bfs = NULL;
 	}
 }
@@ -128,7 +133,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	pvector_t successors;	
 	pvector_create( &successors, 8, nop_fxn, malloc, free );
 
-	bfs_node_t* p_node = (bfs_node_t) p_bfs->malloc( sizeof(bfs_node_t) );
+	bfs_node_t* p_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
 	p_node->parent = NULL;
 	p_node->h      = p_bfs->heuristic( start, end );
 	p_node->state  = start;
@@ -190,7 +195,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 			}
 			else /* iii.) If S is not in the open list, then add S to the open list. */
 			{	
-				bfs_node_t* p_new_node = (bfs_node_t) p_bfs->malloc( sizeof(bfs_node_t) );
+				bfs_node_t* p_new_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
 				p_new_node->parent     = p_node;
 				p_new_node->h          = p_bfs->heuristic( s->state, end );
 				p_new_node->state      = s->state;
@@ -218,7 +223,7 @@ bfs_node_t* bfs_first_node( const bfs_t* p_bfs )
 	return p_bfs->node_path;
 }
 
-void* bfs_state( const bfs_node_t* p_node )
+const void* bfs_state( const bfs_node_t* p_node )
 {
 	assert( p_node );
 	return p_node->state;

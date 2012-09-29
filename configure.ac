@@ -1,8 +1,8 @@
-AC_INIT([libgsearch], [0.1], [manvscode@gmail.com], [libgsearch], [http://www.manvscode.com/])
+AC_INIT([libcsearch], [0.1], [manvscode@gmail.com], [libcsearch], [http://www.manvscode.com/])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AM_SILENT_RULES([yes])
-AC_CONFIG_HEADERS([src/libgsearch-config.h])
+AC_CONFIG_HEADERS([src/libcsearch-config.h])
 
 AC_PROG_CC
 AC_PROG_CC_C99
@@ -11,11 +11,11 @@ AC_HEADER_STDC
 
 
 AH_TOP([
-#ifndef _LIBGSEARCH_H_
-#define _LIBGSEARCH_H_
+#ifndef _LIBCSEARCH_H_
+#define _LIBCSEARCH_H_
 ])
 AH_BOTTOM([
-#endif /* _LIBGSEARCH_H_ */
+#endif /* _LIBCSEARCH_H_ */
 ])
 
 
