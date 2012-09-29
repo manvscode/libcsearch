@@ -1,6 +1,6 @@
 
 # Add new files in alphabetical order. Thanks.
-libgsearch_src = bfs.c
+libgsearch_src = astar.c bfs.c dijkstra.c
 
 # Add new files in alphabetical order. Thanks.
 libgsearch_headers = gsearch.h

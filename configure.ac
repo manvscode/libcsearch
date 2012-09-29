@@ -27,10 +27,6 @@ LDFLAGS=""
 
 LT_INIT([shared static])
 
-AC_PROG_LIBTOOL
-AM_PROG_LIBTOOL
-AC_PROG_RANLIB
-
 
 AC_ARG_ENABLE([allocators],
     AS_HELP_STRING([--disable-allocators], [Disable exposed allocators]))
