@@ -56,8 +56,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			15
-#define DEFAULT_gridHeight			15
+#define DEFAULT_gridWidth			23
+#define DEFAULT_gridHeight			20
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -161,16 +161,11 @@ int main( int argc, char *argv[] )
 	return 0;
 }
 
-static boolean nop_fxn( void *data )
-{
-	return TRUE;
-}
-
 void initialize( )
 {
-	pvector_create( &bfs_path, 1, nop_fxn, malloc, free );
-	pvector_create( &ass_path, 1, nop_fxn, malloc, free );
-	bfs = bfs_create( pointer_hash, tile_manhattan_distance, tile_successors4 );
+	pvector_create( &bfs_path, 1, malloc, free );
+	pvector_create( &ass_path, 1, malloc, free );
+	bfs = bfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -428,6 +423,26 @@ void keyboard_keypress( unsigned char key, int x, int y )
 			glutPostRedisplay( );
 			break;
 		}
+		case '4':
+		{
+			bfs_set_successors_fxn( bfs, tile_successors4 );
+			break;
+		}
+		case '8':
+		{
+			bfs_set_successors_fxn( bfs, tile_successors8 );
+			break;
+		}
+		case 'h':
+		{
+			bfs_set_heuristic_fxn( bfs, tile_manhattan_distance );
+			break;
+		}
+		case 'H':
+		{
+			bfs_set_heuristic_fxn( bfs, tile_euclidean_distance );
+			break;
+		}
 		default:
 			break;
 	}
@@ -554,6 +569,31 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 {
 	const tile_t* p_tile = state;
 
+	#if 0 //optimized version
+	int s4[]   = { -1, 1 };
+	size_t len = sizeof(s4) / sizeof(s4[0]);
+
+
+	for( int i = 0; i < len; i++ )
+	{
+		for( int j = 0; j < len; j++ )
+		{
+			int successorY = p_tile->position.y + s4[ j ];
+			int successorX = p_tile->position.x + s4[ i ];
+
+			if( successorY < 0 ) continue;
+			if( successorX < 0 ) continue;
+			if( successorY >= gridHeight ) continue;
+			if( successorX >= gridWidth ) continue;
+
+			int index = successorY * gridWidth + successorX;
+
+			if( tiles[ index ].is_walkable == FALSE ) continue;
+
+			pvector_push( p_successors, &tiles[ index ] );
+		}
+	}
+	#else // original code
 	for( int j = -1; j <= 1; j++ )
 	{
 		for( int i = -1; i <= 1; i++ )
@@ -574,12 +614,15 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 			pvector_push( p_successors, &tiles[ index ] );
 		}
 	}
+	#endif
 }
 
 void tile_successors4( const void* state, pvector_t* p_successors )
 {
 	const tile_t* p_tile = state;
 
+	#if 0 //optimized version
+	#else // original code
 	for( int i = -1; i <= 1; i += 2 )
 	{
 		int successorY = p_tile->position.y;
@@ -613,6 +656,7 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 
 		pvector_push( p_successors, &tiles[ index ] );
 	}
+	#endif
 }
 
 

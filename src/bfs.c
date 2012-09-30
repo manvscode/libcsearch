@@ -51,10 +51,6 @@ struct bfs_algorithm {
 	#endif
 };
 
-static boolean nop_fxn( void *data )
-{
-	return TRUE;
-}
 static boolean nop_keyval_fxn( void *key, void *value )
 {
 	return TRUE;
@@ -66,11 +62,7 @@ static int pointer_compare( const void* p_n1, const void* p_n2 )
 	return (int) diff;
 }
 
-
-static int default_heuristic_compare( int h1, int h2 )
-{
-	return h2 - h1; // look for lower cost
-}
+#define default_heuristic_compare( h1, h2 )  ((h2) - (h1))
 
 
 static int bfs_heuristic_compare( const void* p_n1, const void* p_n2 )
@@ -94,7 +86,7 @@ bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, success
 		#endif
 
 		pbheap_create( &p_bfs->open_list, 128, 
-					  (heap_compare_function) bfs_heuristic_compare, nop_fxn,
+					  (heap_compare_function) bfs_heuristic_compare, 
 					  malloc, free );
 
 		hash_map_create( &p_bfs->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
@@ -164,7 +156,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	boolean found = FALSE;
 	int i;
 	pvector_t successors;	
-	pvector_create( &successors, 8, nop_fxn, malloc, free );
+	pvector_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	bfs_cleanup( p_bfs );
