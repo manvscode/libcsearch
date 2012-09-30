@@ -26,15 +26,15 @@ extern "C" {
 #endif 
 
 typedef struct coordinate {
-	long x;
-	long y;
+	int x;
+	int y;
 } coordinate_t;
 
 /*
  *  Common Search Heuristics
  */
-unsigned long manhattan_distance ( const coordinate_t *c1, const coordinate_t *c2 );
-unsigned long euclidean_distance ( const coordinate_t *c1, const coordinate_t *c2 );
+unsigned int manhattan_distance ( const coordinate_t *c1, const coordinate_t *c2 );
+unsigned int euclidean_distance ( const coordinate_t *c1, const coordinate_t *c2 );
 
 
 #ifdef __cplusplus

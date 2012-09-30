@@ -48,16 +48,16 @@ void write_text         ( void *font, const char* text, int x, int y, float r, f
 void reset              ( boolean bRandomize );
 static void tile_successors4   ( const void* state, pvector_t* p_successors );
 static void tile_successors8   ( const void* state, pvector_t* p_successors );
-static long tile_manhattan_distance( const void *t1, const void *t2 );
-static long tile_euclidean_distance( const void *t1, const void *t2 );
+static int tile_manhattan_distance( const void *t1, const void *t2 );
+static int tile_euclidean_distance( const void *t1, const void *t2 );
 
 int windowWidth;
 int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			40
-#define DEFAULT_gridHeight			40
+#define DEFAULT_gridWidth			15
+#define DEFAULT_gridHeight			15
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -121,7 +121,7 @@ int main( int argc, char *argv[] )
 
 #ifndef FULLSCREEN
 	glutInitWindowSize( 800, 600 );
-	glutCreateWindow( "[Path Finding Demo] - http://www.ManVsCode.com/" );
+	int windowId = glutCreateWindow( "[Path Finding Demo] - http://www.ManVsCode.com/" );
 #else
 	glutGameModeString( "640x480" );
 
@@ -153,6 +153,9 @@ int main( int argc, char *argv[] )
 
 	initialize( );
 	glutMainLoop( );
+#ifndef FULLSCREEN
+	glutDestroyWindow( windowId );
+#endif
 	deinitialize( );
 
 	return 0;
@@ -613,7 +616,7 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 }
 
 
-long tile_manhattan_distance( const void *t1, const void *t2 )
+int tile_manhattan_distance( const void *t1, const void *t2 )
 {
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
@@ -621,7 +624,7 @@ long tile_manhattan_distance( const void *t1, const void *t2 )
 	return manhattan_distance( &p_tile1->position, &p_tile2->position );
 }
 
-long tile_euclidean_distance( const void *t1, const void *t2 )
+int tile_euclidean_distance( const void *t1, const void *t2 )
 {
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;

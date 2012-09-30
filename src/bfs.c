@@ -21,6 +21,7 @@
  */
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 #include <libcollections/alloc.h>
 #include <libcollections/bheap.h>
@@ -31,18 +32,23 @@
 
 struct bfs_node {
 	struct bfs_node* parent;
-	long h;
+	int h;
 	const void* state;
 };
 
 struct bfs_algorithm {
-	heuristic_fxn  heuristic;
-	successors_fxn successors_of;
-	bfs_node_t*    node_path;
+	heuristic_fxn          heuristic;
+	heuristic_comparer_fxn heuristic_compare;
+	successors_fxn         successors_of;
+	bfs_node_t*            node_path;
 
-	pbheap_t       open_list; /* list of bfs_node_t* */
-	hash_map_t     open_hash_map; /* (state, bfs_node_t*) */
-	tree_map_t     closed_list; /* (state, bfs_node_t*) */
+	pbheap_t               open_list; /* list of bfs_node_t* */
+	hash_map_t             open_hash_map; /* (state, bfs_node_t*) */
+	tree_map_t             closed_list; /* (state, bfs_node_t*) */
+
+	#ifdef _BFS_DEBUG
+	size_t allocations;
+	#endif
 };
 
 static boolean nop_fxn( void *data )
@@ -60,9 +66,16 @@ static int pointer_compare( const void* p_n1, const void* p_n2 )
 	return (int) diff;
 }
 
-static int bfs_node_compare( const void* p_n1, const void* p_n2 )
+
+static int default_heuristic_compare( int h1, int h2 )
 {
-	return ((bfs_node_t*)p_n1)->h > ((bfs_node_t*)p_n2)->h;
+	return h2 - h1; // look for lower cost
+}
+
+
+static int bfs_heuristic_compare( const void* p_n1, const void* p_n2 )
+{
+	return default_heuristic_compare( ((bfs_node_t*)p_n1)->h, ((bfs_node_t*)p_n2)->h );
 }
 
 
@@ -76,9 +89,12 @@ bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, success
 		p_bfs->heuristic     = heuristic;
 		p_bfs->successors_of = successors_of;
 		p_bfs->node_path     = NULL;
+		#ifdef _BFS_DEBUG
+		p_bfs->allocations   = 0;
+		#endif
 
 		pbheap_create( &p_bfs->open_list, 128, 
-					  (heap_compare_function) bfs_node_compare, nop_fxn,
+					  (heap_compare_function) bfs_heuristic_compare, nop_fxn,
 					  malloc, free );
 
 		hash_map_create( &p_bfs->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
@@ -150,13 +166,17 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	pvector_t successors;	
 	pvector_create( &successors, 8, nop_fxn, malloc, free );
 
+ 	/* 1.) Set the open list and closed list to be empty. */
+	bfs_cleanup( p_bfs );
+
 	bfs_node_t* p_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
 	p_node->parent = NULL;
 	p_node->h      = p_bfs->heuristic( start, end );
 	p_node->state  = start;
-
- 	/* 1.) Set the open list and closed list to be empty. */
-	bfs_cleanup( p_bfs );
+	
+	#ifdef _BFS_DEBUG
+	p_bfs->allocations++;
+	#endif
 
  	/* 2.) Add the start node to the open list. */
 	pbheap_push( &p_bfs->open_list, p_node );
@@ -169,7 +189,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 		bfs_node_t* p_current_node = pbheap_peek( &p_bfs->open_list );
 		pbheap_pop( &p_bfs->open_list );
 		hash_map_remove( &p_bfs->open_hash_map, p_current_node->state );
-
+					
 		/* b.) If p_current_node is the goal node, return true. */
 		if( p_current_node->state == end )
 		{
@@ -188,37 +208,42 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 
 				/* i.) If S is not in the closed list, continue. */
 				void* found_node;
-				if( !tree_map_find( &p_bfs->closed_list, successor_state, &found_node ) )
+				if( tree_map_find( &p_bfs->closed_list, successor_state, &found_node ) )
 				{
+					continue;
+				}
 
-					/* ii.) If S is in open list: */
-					if( hash_map_find( &p_bfs->open_hash_map, successor_state, &found_node ) )
+				/* ii.) If S is in open list: */
+				if( hash_map_find( &p_bfs->open_hash_map, successor_state, &found_node ) )
+				{
+					bfs_node_t* p_found_node = (bfs_node_t*) found_node;
+					/* If its heuristic is better, then update its 
+					 * heuristic with the better value and resort 
+					 * the open list.
+					 */
+					int h = p_bfs->heuristic( p_found_node->state, end );
+
+					if( default_heuristic_compare( h, p_found_node->h ) < 0 ) // TODO: Expose heuristic compare
 					{
-						bfs_node_t* p_found_node = (bfs_node_t*) found_node;
-						/* If its heuristic is better, then update its 
-						 * heuristic with the better value and resort 
-						 * the open list.
-						 */
-						long h = p_bfs->heuristic( p_found_node->state, end );
+						p_found_node->h      = h;
+						p_found_node->parent = p_current_node;
 
-						if( h < p_found_node->h )
-						{
-							p_found_node->h      = h;
-							p_found_node->parent = p_current_node;
+						pbheap_reheapify( &p_bfs->open_list );
+					}	
+				}
+				else /* iii.) If S is not in the open list, then add S to the open list. */
+				{	
+					bfs_node_t* p_new_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
+					p_new_node->parent     = p_current_node;
+					p_new_node->h          = p_bfs->heuristic( successor_state, end );
+					p_new_node->state      = successor_state;
 
-							pbheap_reheapify( &p_bfs->open_list );
-						}	
-					}
-					else /* iii.) If S is not in the open list, then add S to the open list. */
-					{	
-						bfs_node_t* p_new_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
-						p_new_node->parent     = p_current_node;
-						p_new_node->h          = p_bfs->heuristic( successor_state, end );
-						p_new_node->state      = successor_state;
-
-						pbheap_push( &p_bfs->open_list, p_new_node );
-						hash_map_insert( &p_bfs->open_hash_map, p_new_node->state, p_new_node );
-					}
+					pbheap_push( &p_bfs->open_list, p_new_node );
+					hash_map_insert( &p_bfs->open_hash_map, p_new_node->state, p_new_node );
+		
+					#ifdef _BFS_DEBUG
+					p_bfs->allocations++;
+					#endif
 				}
 			}
 		}
@@ -232,9 +257,11 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 
 void bfs_cleanup( bfs_t* p_bfs )
 {
-	size_t size1 = pbheap_size( &p_bfs->open_list );
-	size_t size2 = hash_map_size( &p_bfs->open_hash_map );
 	assert( hash_map_size(&p_bfs->open_hash_map) == pbheap_size(&p_bfs->open_list) );
+	#ifdef _BFS_DEBUG
+	assert( size2 + size3 == p_bfs->allocations );
+	#endif
+
 	hash_map_iterator_t open_itr;
 	tree_map_iterator_t closed_itr;
 	
@@ -245,8 +272,10 @@ void bfs_cleanup( bfs_t* p_bfs )
 	{
 		bfs_node_t* p_node = hash_map_iterator_value( &open_itr );
 		free( p_node );	
+		#ifdef _BFS_DEBUG
+		p_bfs->allocations--;
+		#endif
 	}
-
 
 	// free everything on the closed list.
 	for( closed_itr = tree_map_begin( &p_bfs->closed_list );
@@ -254,7 +283,15 @@ void bfs_cleanup( bfs_t* p_bfs )
 	     closed_itr = tree_map_next( closed_itr ) )
 	{
 		free( closed_itr->value );	
+		#ifdef _BFS_DEBUG
+		p_bfs->allocations--;
+		#endif
 	}
+
+	// empty out the data structures
+	pbheap_clear( &p_bfs->open_list );
+	hash_map_clear( &p_bfs->open_hash_map );
+	tree_map_clear( &p_bfs->closed_list );
 }
 
 bfs_node_t* bfs_first_node( const bfs_t* p_bfs )
