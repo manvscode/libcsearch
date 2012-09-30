@@ -34,6 +34,7 @@ typedef void*   (*alloc_fxn)              ( size_t size );
 typedef void    (*free_fxn)               ( void *data );
 typedef size_t  (*state_hash_fxn)         ( const void* state );
 typedef int     (*heuristic_fxn)          ( const void* state1, const void* state2 );
+typedef int     (*cost_fxn)               ( const void* state1, const void* state2 );
 typedef int     (*heuristic_comparer_fxn) ( int h1, int h2 );
 typedef void    (*successors_fxn)         ( const void* state, pvector_t* p_successors );
 
