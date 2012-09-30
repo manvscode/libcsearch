@@ -42,8 +42,8 @@ lib/.dirstamp
 src/.deps
 src/stamp-h1
 tests/.deps
-src/libgsearch-config.h
-src/libgsearch-config.h.in
+src/libcsearch-config.h
+src/libcsearch-config.h.in
 depcomp
 install-sh
 missing

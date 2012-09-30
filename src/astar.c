@@ -21,7 +21,7 @@
  */
 #include <stdlib.h>
 #include <assert.h>
-#include "gsearch.h"
+#include "csearch.h"
 
 struct astar_algorithm {
 	const void* state;

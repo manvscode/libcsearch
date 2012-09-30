@@ -22,8 +22,9 @@
 #include <GL/freeglut.h>
 #include <libcollections/types.h>
 #include <libcollections/vector.h>
-#include <libgsearch/csearch.h>
-#include <libgsearch/heuristic.h>
+#include <libcollections/hash-functions.h>
+#include <csearch.h>
+#include <heuristics.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -31,25 +32,31 @@
 
 #define ESC_KEY			27
 
+extern void* pvector_get( pvector_t *p_vector, size_t index );
+
 void initialize         ( );
 void deinitialize       ( );
-void drawTiles          ( );
-void drawPath           ( const pvector_t* path, GLfloat color[] );
+void draw_tiles         ( );
+void draw_path          ( const pvector_t* path, GLfloat color[] );
 void render             ( );
 void resize             ( int width, int height );
 void keyboard_keypress  ( unsigned char key, int x, int y );
 void mouse              ( int button, int state, int x, int y );
-void mouseMotion        ( int x, int y );
+void mouse_motion       ( int x, int y );
 void idle               ( );
-void writeText          ( void *font, const char* text, int x, int y, float r, float g, float b );
+void write_text         ( void *font, const char* text, int x, int y, float r, float g, float b );
 void reset              ( boolean bRandomize );
+static void tile_successors4   ( const void* state, pvector_t* p_successors );
+static void tile_successors8   ( const void* state, pvector_t* p_successors );
+static long tile_manhattan_distance( const void *t1, const void *t2 );
+static long tile_euclidean_distance( const void *t1, const void *t2 );
 
 int windowWidth;
 int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			40		
+#define DEFAULT_gridWidth			40
 #define DEFAULT_gridHeight			40
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
@@ -58,14 +65,9 @@ GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 	};
 
 
-typedef struct coordinate {
-	int x;
-	int y;
-} coordinate_t;
-
 typedef struct tile {
 	coordinate_t position;
-	boolean bWalkable;
+	boolean      is_walkable;
 
 	// stuff for BFS...
 	int cost;
@@ -144,7 +146,7 @@ int main( int argc, char *argv[] )
 	glutKeyboardFunc( keyboard_keypress );
 	glutIdleFunc( idle );
 	glutMouseFunc( mouse );
-	glutMotionFunc( mouseMotion );
+	glutMotionFunc( mouse_motion );
 
 
 	glutSetOption( GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS );
@@ -156,11 +158,16 @@ int main( int argc, char *argv[] )
 	return 0;
 }
 
+static boolean nop_fxn( void *data )
+{
+	return TRUE;
+}
 
 void initialize( )
 {
-	bfs = bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
-
+	pvector_create( &bfs_path, 1, nop_fxn, malloc, free );
+	pvector_create( &ass_path, 1, nop_fxn, malloc, free );
+	bfs = bfs_create( pointer_hash, tile_manhattan_distance, tile_successors4 );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -204,7 +211,7 @@ void initialize( )
 		glPushAttrib( GL_CURRENT_BIT | GL_LINE_BIT );			
 			glEnable( GL_LINE_STIPPLE );
 			glLineStipple( 1, 0xF0F0 );
-			glLineWidth( 0.35f );
+			glLineWidth( 0.1f );
 			glColor3f( 0.2f, 1.0f, 1.0f );
 
 			glMapGrid2f( gridWidth, 0.0, 1.0, gridHeight, 0.0, 1.0 );
@@ -217,13 +224,15 @@ void initialize( )
 
 void deinitialize( )
 {
+	pvector_destroy( &bfs_path );
+	pvector_destroy( &ass_path );
 	bfs_destroy( &bfs );
 	free( tiles );
 	glDeleteLists( blockList, 2 );
 }
 
 
-void drawTiles( )
+void draw_tiles( )
 {
 	// draw tiles
 	for( unsigned int y = 0; y < gridHeight; y++ )
@@ -238,7 +247,7 @@ void drawTiles( )
 						glColor3f( 0.0f, 1.0f, 0.0f );
 					else if( x == end.x && y == end.y )
 						glColor3f( 1.0f, 0.0f, 0.0f );
-					else if( !tiles[ index ].bWalkable )
+					else if( !tiles[ index ].is_walkable )
 						glColor3f( 0.0f, 0.0f, 1.0f );
 					else
 						continue;
@@ -256,7 +265,7 @@ void drawTiles( )
 }
 
 
-void drawPath( const pvector_t *path, GLfloat color[] )
+void draw_path( const pvector_t *path, GLfloat color[] )
 {
 	size_t i;
 	if( pvector_size(path) <= 0 ) return;
@@ -284,10 +293,10 @@ void render( )
 	glLoadIdentity( );	
 
 
-	drawTiles( );
+	draw_tiles( );
 
-	drawPath( &ass_path, assPathColor );
-	drawPath( &bfs_path, bfsPathColor );
+	draw_path( &ass_path, assPathColor );
+	draw_path( &bfs_path, bfsPathColor );
 
 	// draw grid...
 	if( gridWidth * gridWidth <= 1600 )
@@ -300,8 +309,8 @@ void render( )
 	//int width = glutGet((GLenum)GLUT_WINDOW_WIDTH);
 	//int height = glutGet((GLenum)GLUT_WINDOW_HEIGHT);
 
-	writeText( GLUT_BITMAP_HELVETICA_18, "Path Finding", 2, 22, 1.0f, 1.0f, 1.0f );
-	writeText( GLUT_BITMAP_8_BY_13, "Press <ESC> to quit, <A> for A*, <B> for Best-First Search, <R> to randomize, and <r> to reset.", 2, 5, 1.0f, 1.0f, 1.0f );
+	write_text( GLUT_BITMAP_HELVETICA_18, "Path Finding", 2, 22, 1.0f, 1.0f, 1.0f );
+	write_text( GLUT_BITMAP_8_BY_13, "Press <ESC> to quit, <A> for A*, <B> for Best-First Search, <R> to randomize, and <r> to reset.", 2, 5, 1.0f, 1.0f, 1.0f );
 	
 	glutSwapBuffers( );
 }
@@ -353,12 +362,12 @@ void keyboard_keypress( unsigned char key, int x, int y )
 			pvector_clear( &ass_path );
 			if( start.x == -1 || start.y == -1 ) return;
 			if( end.x == -1 || end.y == -1 ) return;
-			tile_t *pStart = &tiles[ start.y * gridWidth + start.x ];
-			tile_t *pEnd = &tiles[ end.y * gridWidth + end.x ];
+			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
+			tile_t *p_end = &tiles[ end.y * gridWidth + end.x ];
 
-			boolean bPathFound = ass.find( pStart, pEnd );
+			boolean found = ass.find( p_start, p_end );
 
-			if( bPathFound )
+			if( found )
 			{
 				ASS::Node *pPathNode = ass.getPath( );
 
@@ -379,27 +388,28 @@ void keyboard_keypress( unsigned char key, int x, int y )
 		case 'B':
 		case 'b':
 		{ 
-			pvector_clear( &bfs_path );
 			if( start.x == -1 || start.y == -1 ) return;
 			if( end.x == -1 || end.y == -1 ) return;
-			tile_t *pStart = &tiles[ start.y * gridWidth + start.x ];
-			tile_t *pEnd = &tiles[ end.y * gridWidth + end.x ];
 
-			boolean bPathFound = bfs.find( pStart, pEnd );
+			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
+			tile_t *p_end   = &tiles[ end.y * gridWidth + end.x ];
 
-			if( bPathFound )
+			boolean found = bfs_find( bfs, p_start, p_end );
+
+			if( found )
 			{
-				BFS::Node *pPathNode = bfs.getPath( );
+				bfs_node_t* p_node;
+				pvector_clear( &bfs_path );
 
-				while( pPathNode != NULL )
+				for( p_node = bfs_first_node( bfs );
+				     p_node != NULL;
+				     p_node = bfs_next_node( p_node ) )
 				{
-					bfs_path.push_back( pPathNode->state );
-					pPathNode = pPathNode->parent;
+					pvector_push( &bfs_path, (void*) bfs_state(p_node) );
 				}
-
 			}
 			
-			bfs.cleanup( );
+			bfs_cleanup( bfs );
 			glutPostRedisplay( );
 			break;
 		}
@@ -436,6 +446,8 @@ void mouse( int button, int state, int x, int y )
 		
 		start.x = elementX;
 		start.y = elementY;
+
+		glutPostRedisplay( );
 	}
 	else if( mouseButton == GLUT_RIGHT_BUTTON && mouseButtonState == GLUT_DOWN )
 	{
@@ -444,10 +456,12 @@ void mouse( int button, int state, int x, int y )
 		
 		end.x = elementX;
 		end.y = elementY;
+
+		glutPostRedisplay( );
 	}
 }
 
-void mouseMotion( int x, int y )
+void mouse_motion( int x, int y )
 {
 	if( mouseButton == GLUT_LEFT_BUTTON && mouseButtonState == GLUT_DOWN )
 	{
@@ -455,7 +469,7 @@ void mouseMotion( int x, int y )
 		unsigned int elementY = (windowHeight - y) / tileHeight;
 
 		unsigned int index = elementY * gridWidth + elementX;
-		tiles[ index ].bWalkable = FALSE;
+		tiles[ index ].is_walkable = FALSE;
 		glutPostRedisplay( );
 	}
 }
@@ -463,7 +477,7 @@ void mouseMotion( int x, int y )
 void idle( )
 { /*glutPostRedisplay( );*/ }
 
-void writeText( void *font, const char* text, int x, int y, float r, float g, float b )
+void write_text( void *font, const char* text, int x, int y, float r, float g, float b )
 {
 	int width   = glutGet( (GLenum) GLUT_WINDOW_WIDTH );
 	int height  = glutGet( (GLenum) GLUT_WINDOW_HEIGHT );
@@ -510,12 +524,12 @@ void reset( boolean bRandomize )
 			unsigned int index = y * gridWidth + x;
 
 			if( bRandomize )
-				tiles[ index ].bWalkable = ( rand() % 1000 ) > 200 ? TRUE : FALSE;
+				tiles[ index ].is_walkable = ( rand() % 1000 ) > 200 ? TRUE : FALSE;
 			else
-				tiles[ index ].bWalkable =  TRUE;
+				tiles[ index ].is_walkable =  TRUE;
 
-			tiles[ index ].X = x;
-			tiles[ index ].Y = y;
+			tiles[ index ].position.x = x;
+			tiles[ index ].position.y = y;
 
 			tiles[ index ].cost = 0;
 			tiles[ index ].F = 0;
@@ -533,84 +547,84 @@ void reset( boolean bRandomize )
 
 
 
+void tile_successors8( const void* state, pvector_t* p_successors )
+{
+	const tile_t* p_tile = state;
 
-
-
-
-
-struct TileSuccessors8 {
-	std::vector<Tile *> operator()( const Tile *tile )
+	for( int j = -1; j <= 1; j++ )
 	{
-		std::vector<Tile *> successors;
-
-		for( int j = -1; j <= 1; j++ )
+		for( int i = -1; i <= 1; i++ )
 		{
-			for( int i = -1; i <= 1; i++ )
-			{
-				if( i == 0 && j == 0 ) continue;
-				int successorY = tile->Y + j;
-				int successorX = tile->X + i;
-
-				if( successorY < 0 ) continue;
-				if( successorX < 0 ) continue;
-				if( successorY >= gridWidth ) continue;
-				if( successorX >= gridHeight ) continue;
-
-				int index = successorY * gridWidth + successorX;
-
-				if( tiles[ index ].bWalkable == false ) continue;
-
-				successors.push_back( &tiles[ index ] );
-			}
-		}
-
-		return successors;
-	}
-};
-
-
-struct TileSuccessors4 {
-	std::vector<Tile *> operator()( const Tile *tile )
-	{
-		std::vector<Tile *> successors;
-
-		for( int i = -1; i <= 1; i += 2 )
-		{
-			int successorY = tile->Y;
-			int successorX = tile->X + i;
+			if( i == 0 && j == 0 ) continue;
+			int successorY = p_tile->position.y + j;
+			int successorX = p_tile->position.x + i;
 
 			if( successorY < 0 ) continue;
 			if( successorX < 0 ) continue;
-			if( successorY >= gridHeight ) continue;
-			if( successorX >= gridWidth ) continue;
+			if( successorY >= gridWidth ) continue;
+			if( successorX >= gridHeight ) continue;
 
 			int index = successorY * gridWidth + successorX;
 
-			if( tiles[ index ].bWalkable == false ) continue;
+			if( tiles[ index ].is_walkable == FALSE ) continue;
 
-			successors.push_back( &tiles[ index ] );
+			pvector_push( p_successors, &tiles[ index ] );
 		}
-
-		for( int i = -1; i <= 1; i += 2 )
-		{
-			int successorY = tile->Y + i;
-			int successorX = tile->X;
-
-			if( successorY < 0 ) continue;
-			if( successorX < 0 ) continue;
-			if( successorY >= gridHeight ) continue;
-			if( successorX >= gridWidth ) continue;
-
-			int index = successorY * gridWidth + successorX;
-
-			if( tiles[ index ].bWalkable == false ) continue;
-
-			successors.push_back( &tiles[ index ] );
-		}
-		
-
-		return successors;
 	}
-};
+}
+
+void tile_successors4( const void* state, pvector_t* p_successors )
+{
+	const tile_t* p_tile = state;
+
+	for( int i = -1; i <= 1; i += 2 )
+	{
+		int successorY = p_tile->position.y;
+		int successorX = p_tile->position.x + i;
+
+		if( successorY < 0 ) continue;
+		if( successorX < 0 ) continue;
+		if( successorY >= gridHeight ) continue;
+		if( successorX >= gridWidth ) continue;
+
+		int index = successorY * gridWidth + successorX;
+
+		if( tiles[ index ].is_walkable == FALSE ) continue;
+
+		pvector_push( p_successors, &tiles[ index ] );
+	}
+
+	for( int i = -1; i <= 1; i += 2 )
+	{
+		int successorY = p_tile->position.y + i;
+		int successorX = p_tile->position.x;
+
+		if( successorY < 0 ) continue;
+		if( successorX < 0 ) continue;
+		if( successorY >= gridHeight ) continue;
+		if( successorX >= gridWidth ) continue;
+
+		int index = successorY * gridWidth + successorX;
+
+		if( tiles[ index ].is_walkable == FALSE ) continue;
+
+		pvector_push( p_successors, &tiles[ index ] );
+	}
+}
 
 
+long tile_manhattan_distance( const void *t1, const void *t2 )
+{
+	const tile_t* p_tile1 = t1;
+	const tile_t* p_tile2 = t2;
+
+	return manhattan_distance( &p_tile1->position, &p_tile2->position );
+}
+
+long tile_euclidean_distance( const void *t1, const void *t2 )
+{
+	const tile_t* p_tile1 = t1;
+	const tile_t* p_tile2 = t2;
+
+	return euclidean_distance( &p_tile1->position, &p_tile2->position );
+}

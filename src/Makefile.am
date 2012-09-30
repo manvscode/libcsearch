@@ -11,4 +11,5 @@ library_include_HEADERS = $(libcsearch_headers)
 # Library
 lib_LTLIBRARIES                           = $(top_builddir)/lib/libcsearch.la 
 __top_builddir__lib_libcsearch_la_SOURCES = $(libcsearch_src)
+__top_builddir__lib_libcsearch_la_LIBADD  = -lcollections
 

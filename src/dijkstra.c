@@ -21,7 +21,7 @@
  */
 #include <stdlib.h>
 #include <assert.h>
-#include "gsearch.h"
+#include "csearch.h"
 
 struct dijkstra_algorithm {
 	const void* state;

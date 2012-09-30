@@ -1,5 +1,6 @@
-AM_CFLAGS = -std=gnu99 -Wall -pedantic -O3 -DUSE_ALLOCATORS -I ../src/ -L../lib/ 
-LDADD     = -lcollections -lcsearch
+#AM_CFLAGS = -std=gnu99 -Wall -pedantic -O3 -I$(top_builddir)/src/ -I/usr/local/include/ -L$(top_builddir)/lib/  -L/usr/local/lib
+AM_CFLAGS = -std=gnu99 -Wall -pedantic -g -ggdb -O0 -I$(top_builddir)/src/ -I/usr/local/include/ -L$(top_builddir)/lib/  -L/usr/local/lib
+LDADD     = -lcollections -lcsearch  -lGL -lglut
 
 bin_PROGRAMS = \
 $(top_builddir)/bin/pathfinding 

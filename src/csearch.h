@@ -21,17 +21,20 @@
  */
 #ifndef _CSEARCH_H_
 #define _CSEARCH_H_
+#include <libcollections/vector.h>
 #ifdef __cplusplus
 extern "C" {
 #endif 
 
-#include <libcollections/vector.h>
 
+/*
+ *  Function Callbacks
+ */
 typedef void*   (*alloc_fxn)       ( size_t size );
 typedef void    (*free_fxn)        ( void *data );
 typedef size_t  (*state_hash_fxn)  ( const void* state );
-typedef int     (*heuristic_fxn)   ( const void* state1, const void* state2 );
-typedef void    (*successors_fxn)  ( const void* state, /*out*/ pvector_t* p_successors );
+typedef long    (*heuristic_fxn)   ( const void* state1, const void* state2 );
+typedef void    (*successors_fxn)  ( const void* state, pvector_t* p_successors );
 
 
 /*
@@ -65,14 +68,15 @@ typedef struct bfs_algorithm bfs_t;
 struct bfs_node;
 typedef struct bfs_node bfs_node_t;
 
-
-bfs_t*      bfs_create     ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
-void        bfs_destroy    ( bfs_t** p_bfs );
-boolean     bfs_find       ( bfs_t* p_bfs, const void* start, const void* end );
-void        bfs_cleanup    ( bfs_t* p_bfs );
-bfs_node_t* bfs_first_node ( const bfs_t* p_bfs );
-const void* bfs_state      ( const bfs_node_t* p_node );
-bfs_node_t* bfs_next_node  ( const bfs_node_t* p_node );
+bfs_t*      bfs_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
+void        bfs_destroy            ( bfs_t** p_bfs );
+void        bfs_set_heuristic_fxn  ( bfs_t* p_bfs, heuristic_fxn heuristic );
+void        bfs_set_successors_fxn ( bfs_t* p_bfs, successors_fxn successors_of );
+boolean     bfs_find               ( bfs_t* p_bfs, const void* start, const void* end );
+void        bfs_cleanup            ( bfs_t* p_bfs );
+bfs_node_t* bfs_first_node         ( const bfs_t* p_bfs );
+const void* bfs_state              ( const bfs_node_t* p_node );
+bfs_node_t* bfs_next_node          ( const bfs_node_t* p_node );
 
 
 /*
