@@ -253,6 +253,8 @@ void bfs_cleanup( bfs_t* p_bfs )
 	#ifdef _BFS_DEBUG
 	assert( size2 + size3 == p_bfs->allocations );
 	#endif
+	
+	p_bfs->node_path = NULL;
 
 	hash_map_iterator_t open_itr;
 	tree_map_iterator_t closed_itr;
