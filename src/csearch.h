@@ -65,15 +65,15 @@ typedef struct breadthfs_algorithm breadthfs_t;
 struct breadthfs_node;
 typedef struct breadthfs_node breadthfs_node_t;
 
-breadthfs_t*      breadthdfs_create             ( compare_fxn compare, successors_fxn successors_of );
-void              breadthdfs_destroy            ( breadthfs_t** p_bfs );
-void              breadthdfs_set_compare_fxn    ( breadthfs_t* p_bfs, compare_fxn compare );
-void              breadthdfs_set_successors_fxn ( breadthfs_t* p_bfs, successors_fxn successors_of );
-boolean           breadthdfs_find               ( breadthfs_t* p_bfs, const void* start, const void* end );
-void              breadthdfs_cleanup            ( breadthfs_t* p_bfs );
-breadthfs_node_t* breadthdfs_first_node         ( const breadthfs_t* p_bfs );
-const void*       breadthdfs_state              ( const breadthfs_node_t* p_node );
-breadthfs_node_t* breadthdfs_next_node          ( const breadthfs_node_t* p_node );
+breadthfs_t*      breadthfs_create             ( state_hash_fxn state_hasher, compare_fxn compare, successors_fxn successors_of );
+void              breadthfs_destroy            ( breadthfs_t** p_bfs );
+void              breadthfs_set_compare_fxn    ( breadthfs_t* p_bfs, compare_fxn compare );
+void              breadthfs_set_successors_fxn ( breadthfs_t* p_bfs, successors_fxn successors_of );
+boolean           breadthfs_find               ( breadthfs_t* p_bfs, const void* start, const void* end );
+void              breadthfs_cleanup            ( breadthfs_t* p_bfs );
+breadthfs_node_t* breadthfs_first_node         ( const breadthfs_t* p_bfs );
+const void*       breadthfs_state              ( const breadthfs_node_t* p_node );
+breadthfs_node_t* breadthfs_next_node          ( const breadthfs_node_t* p_node );
 
 
 /*
