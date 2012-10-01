@@ -30,21 +30,21 @@
 #include <libcollections/vector.h>
 #include "csearch.h"
 
-struct bfs_node {
-	struct bfs_node* parent;
+struct bestfs_node {
+	struct bestfs_node* parent;
 	int h;
 	const void* state;
 };
 
-struct bfs_algorithm {
+struct bestfs_algorithm {
 	heuristic_fxn          heuristic;
 	heuristic_comparer_fxn heuristic_compare;
 	successors_fxn         successors_of;
-	bfs_node_t*            node_path;
+	bestfs_node_t*            node_path;
 
-	pbheap_t               open_list; /* list of bfs_node_t* */
-	hash_map_t             open_hash_map; /* (state, bfs_node_t*) */
-	tree_map_t             closed_list; /* (state, bfs_node_t*) */
+	pbheap_t               open_list; /* list of bestfs_node_t* */
+	hash_map_t             open_hash_map; /* (state, bestfs_node_t*) */
+	tree_map_t             closed_list; /* (state, bestfs_node_t*) */
 
 	#ifdef _BFS_DEBUG
 	size_t allocations;
@@ -65,16 +65,16 @@ static int pointer_compare( const void* p_n1, const void* p_n2 )
 #define default_heuristic_compare( h1, h2 )  ((h2) - (h1))
 
 
-static int bfs_heuristic_compare( const void* p_n1, const void* p_n2 )
+static int bestfs_heuristic_compare( const void* p_n1, const void* p_n2 )
 {
-	return default_heuristic_compare( ((bfs_node_t*)p_n1)->h, ((bfs_node_t*)p_n2)->h );
+	return default_heuristic_compare( ((bestfs_node_t*)p_n1)->h, ((bestfs_node_t*)p_n2)->h );
 }
 
 
 	
-bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of )
+bestfs_t* bestfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of )
 {
-	bfs_t* p_bfs = (bfs_t*) malloc( sizeof(bfs_t) );
+	bestfs_t* p_bfs = (bestfs_t*) malloc( sizeof(bestfs_t) );
 
 	if( p_bfs )
 	{
@@ -86,7 +86,7 @@ bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, success
 		#endif
 
 		pbheap_create( &p_bfs->open_list, 128, 
-					  (heap_compare_function) bfs_heuristic_compare, 
+					  (heap_compare_function) bestfs_heuristic_compare, 
 					  malloc, free );
 
 		hash_map_create( &p_bfs->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
@@ -99,11 +99,11 @@ bfs_t* bfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, success
 	return p_bfs;
 }
 
-void bfs_destroy( bfs_t** p_bfs )
+void bestfs_destroy( bestfs_t** p_bfs )
 {
 	if( p_bfs && *p_bfs )
 	{
-		bfs_cleanup( *p_bfs );
+		bestfs_cleanup( *p_bfs );
 		pbheap_destroy( &(*p_bfs)->open_list );		
 		hash_map_destroy( &(*p_bfs)->open_hash_map );		
 		tree_map_destroy( &(*p_bfs)->closed_list );		
@@ -112,7 +112,7 @@ void bfs_destroy( bfs_t** p_bfs )
 	}
 }
 
-void bfs_set_heuristic_fxn( bfs_t* p_bfs, heuristic_fxn heuristic )
+void bestfs_set_heuristic_fxn( bestfs_t* p_bfs, heuristic_fxn heuristic )
 {
 	if( p_bfs )
 	{
@@ -120,7 +120,7 @@ void bfs_set_heuristic_fxn( bfs_t* p_bfs, heuristic_fxn heuristic )
 	}
 }
 
-void bfs_set_successors_fxn( bfs_t* p_bfs, successors_fxn successors_of )
+void bestfs_set_successors_fxn( bestfs_t* p_bfs, successors_fxn successors_of )
 {
 	if( p_bfs )
 	{
@@ -151,7 +151,7 @@ void bfs_set_successors_fxn( bfs_t* p_bfs, successors_fxn successors_of )
  *        e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
+boolean bestfs_find( bestfs_t* p_bfs, const void* start, const void* end )
 {
 	boolean found = FALSE;
 	int i;
@@ -159,9 +159,9 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	pvector_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
-	bfs_cleanup( p_bfs );
+	bestfs_cleanup( p_bfs );
 
-	bfs_node_t* p_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
+	bestfs_node_t* p_node = (bestfs_node_t*) malloc( sizeof(bestfs_node_t) );
 	p_node->parent = NULL;
 	p_node->h      = p_bfs->heuristic( start, end );
 	p_node->state  = start;
@@ -178,7 +178,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	while( !found && pbheap_size(&p_bfs->open_list) > 0 )
 	{
  		/* a.) Get a node from the open list, call it p_current_node. */
-		bfs_node_t* p_current_node = pbheap_peek( &p_bfs->open_list );
+		bestfs_node_t* p_current_node = pbheap_peek( &p_bfs->open_list );
 		pbheap_pop( &p_bfs->open_list );
 		hash_map_remove( &p_bfs->open_hash_map, p_current_node->state );
 					
@@ -208,7 +208,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 				/* ii.) If S is in open list: */
 				if( hash_map_find( &p_bfs->open_hash_map, successor_state, &found_node ) )
 				{
-					bfs_node_t* p_found_node = (bfs_node_t*) found_node;
+					bestfs_node_t* p_found_node = (bestfs_node_t*) found_node;
 					/* If its heuristic is better, then update its 
 					 * heuristic with the better value and resort 
 					 * the open list.
@@ -225,7 +225,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 				}
 				else /* iii.) If S is not in the open list, then add S to the open list. */
 				{	
-					bfs_node_t* p_new_node = (bfs_node_t*) malloc( sizeof(bfs_node_t) );
+					bestfs_node_t* p_new_node = (bestfs_node_t*) malloc( sizeof(bestfs_node_t) );
 					p_new_node->parent     = p_current_node;
 					p_new_node->h          = p_bfs->heuristic( successor_state, end );
 					p_new_node->state      = successor_state;
@@ -247,7 +247,7 @@ boolean bfs_find( bfs_t* p_bfs, const void* start, const void* end )
 	return found;
 }
 
-void bfs_cleanup( bfs_t* p_bfs )
+void bestfs_cleanup( bestfs_t* p_bfs )
 {
 	assert( hash_map_size(&p_bfs->open_hash_map) == pbheap_size(&p_bfs->open_list) );
 	#ifdef _BFS_DEBUG
@@ -264,7 +264,7 @@ void bfs_cleanup( bfs_t* p_bfs )
 	// free everything on the open list.
 	while( hash_map_iterator_next( &open_itr ) )
 	{
-		bfs_node_t* p_node = hash_map_iterator_value( &open_itr );
+		bestfs_node_t* p_node = hash_map_iterator_value( &open_itr );
 		free( p_node );	
 		#ifdef _BFS_DEBUG
 		p_bfs->allocations--;
@@ -288,19 +288,19 @@ void bfs_cleanup( bfs_t* p_bfs )
 	tree_map_clear( &p_bfs->closed_list );
 }
 
-bfs_node_t* bfs_first_node( const bfs_t* p_bfs )
+bestfs_node_t* bestfs_first_node( const bestfs_t* p_bfs )
 {
 	assert( p_bfs );
 	return p_bfs->node_path;
 }
 
-const void* bfs_state( const bfs_node_t* p_node )
+const void* bestfs_state( const bestfs_node_t* p_node )
 {
 	assert( p_node );
 	return p_node->state;
 }
 
-bfs_node_t* bfs_next_node( const bfs_node_t* p_node )
+bestfs_node_t* bestfs_next_node( const bestfs_node_t* p_node )
 {
 	assert( p_node );
 	return p_node->parent;

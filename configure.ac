@@ -20,8 +20,8 @@ AH_BOTTOM([
 
 
 
-CFLAGS="-std=gnu99 -Wall -pedantic -g -ggdb -pg -O0 -I/usr/local/include"
-#CFLAGS="-std=gnu99 -Wall -pedantic -O3 -I/usr/local/include"
+#CFLAGS="-std=gnu99 -Wall -pedantic -g -ggdb -pg -O0 -I/usr/local/include"
+CFLAGS="-std=gnu99 -Wall -pedantic -pg -O2 -I/usr/local/include"
 LDFLAGS="-lcollections -L/usr/local/lib"
 
 

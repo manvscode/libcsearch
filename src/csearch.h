@@ -33,10 +33,36 @@ extern "C" {
 typedef void*   (*alloc_fxn)              ( size_t size );
 typedef void    (*free_fxn)               ( void *data );
 typedef size_t  (*state_hash_fxn)         ( const void* state );
+typedef int     (*compare_fxn)            ( const void* state1, const void* state2 );
 typedef int     (*heuristic_fxn)          ( const void* state1, const void* state2 );
 typedef int     (*cost_fxn)               ( const void* state1, const void* state2 );
 typedef int     (*heuristic_comparer_fxn) ( int h1, int h2 );
 typedef void    (*successors_fxn)         ( const void* state, pvector_t* p_successors );
+
+
+/*
+ *  Breadth First Search Algorithm
+ *
+ *  Best-first search is a method of combinatorial search where 
+ *  a heuristic function is used to guide the search toward the 
+ *  goal. The heuristic function takes two nodes as input and 
+ *  evaluates how likely that node will lead toward the goal.
+ */
+struct breadthfs_algorithm;
+typedef struct breadthfs_algorithm breadthfs_t;
+
+struct breadthfs_node;
+typedef struct breadthfs_node breadthfs_node_t;
+
+breadthfs_t*      breadthdfs_create             ( compare_fxn compare, successors_fxn successors_of );
+void              breadthdfs_destroy            ( breadthfs_t** p_bfs );
+void              breadthdfs_set_compare_fxn    ( breadthfs_t* p_bfs, compare_fxn compare );
+void              breadthdfs_set_successors_fxn ( breadthfs_t* p_bfs, successors_fxn successors_of );
+boolean           breadthdfs_find               ( breadthfs_t* p_bfs, const void* start, const void* end );
+void              breadthdfs_cleanup            ( breadthfs_t* p_bfs );
+breadthfs_node_t* breadthdfs_first_node         ( const breadthfs_t* p_bfs );
+const void*       breadthdfs_state              ( const breadthfs_node_t* p_node );
+breadthfs_node_t* breadthdfs_next_node          ( const breadthfs_node_t* p_node );
 
 
 /*
@@ -64,21 +90,21 @@ typedef void    (*successors_fxn)         ( const void* state, pvector_t* p_succ
  *  - The results of this algorithm can appear silly or stupid at 
  *    times.
  */
-struct bfs_algorithm;
-typedef struct bfs_algorithm bfs_t;
+struct bestfs_algorithm;
+typedef struct bestfs_algorithm bestfs_t;
 
-struct bfs_node;
-typedef struct bfs_node bfs_node_t;
+struct bestfs_node;
+typedef struct bestfs_node bestfs_node_t;
 
-bfs_t*      bfs_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
-void        bfs_destroy            ( bfs_t** p_bfs );
-void        bfs_set_heuristic_fxn  ( bfs_t* p_bfs, heuristic_fxn heuristic );
-void        bfs_set_successors_fxn ( bfs_t* p_bfs, successors_fxn successors_of );
-boolean     bfs_find               ( bfs_t* p_bfs, const void* start, const void* end );
-void        bfs_cleanup            ( bfs_t* p_bfs );
-bfs_node_t* bfs_first_node         ( const bfs_t* p_bfs );
-const void* bfs_state              ( const bfs_node_t* p_node );
-bfs_node_t* bfs_next_node          ( const bfs_node_t* p_node );
+bestfs_t*      bestfs_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
+void           bestfs_destroy            ( bestfs_t** p_bfs );
+void           bestfs_set_heuristic_fxn  ( bestfs_t* p_bfs, heuristic_fxn heuristic );
+void           bestfs_set_successors_fxn ( bestfs_t* p_bfs, successors_fxn successors_of );
+boolean        bestfs_find               ( bestfs_t* p_bfs, const void* start, const void* end );
+void           bestfs_cleanup            ( bestfs_t* p_bfs );
+bestfs_node_t* bestfs_first_node         ( const bestfs_t* p_bfs );
+const void*    bestfs_state              ( const bestfs_node_t* p_node );
+bestfs_node_t* bestfs_next_node          ( const bestfs_node_t* p_node );
 
 
 /*
@@ -103,8 +129,15 @@ bfs_node_t* bfs_next_node          ( const bfs_node_t* p_node );
 struct dijkstra_algorithm;
 typedef struct dijkstra_algorithm dijkstra_t;
 
-dijkstra_t* dijkstra_create( void );
-void        dijkstra_destroy( dijkstra_t** p_dijkstra );
+dijkstra_t*      dijkstra_create             ( cost_fxn cost, successors_fxn successors_of );
+void             dijkstra_destroy            ( dijkstra_t** p_dijkstra );
+void             dijkstra_set_cost_fxn       ( dijkstra_t* p_dijkstra, cost_fxn cost );
+void             dijkstra_set_successors_fxn ( dijkstra_t* p_dijkstra, successors_fxn successors_of );
+boolean          dijkstra_find               ( dijkstra_t* p_dijkstra, const void* start, const void* end );
+void             dijkstra_cleanup            ( dijkstra_t* p_dijkstra );
+//dijkstra_node_t* dijkstra_first_node         ( const dijkstra_t* p_dijkstra );
+//const void*      dijkstra_state              ( const dijkstra_node_t* p_node );
+//dijkstra_node_t* dijkstra_next_node          ( const dijkstra_node_t* p_node );
 
 
 /*

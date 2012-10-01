@@ -27,7 +27,7 @@ struct dijkstra_algorithm {
 	const void* state;
 };
 
-dijkstra_t* dijkstra_create( void )
+dijkstra_t* dijkstra_create( cost_fxn cost, successors_fxn successors_of )
 {
 	dijkstra_t* p_dijkstra = (dijkstra_t*) malloc( sizeof(dijkstra_t) );
 

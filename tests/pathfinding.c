@@ -92,9 +92,9 @@ unsigned int gridWidth = DEFAULT_gridWidth;
 unsigned int gridHeight = DEFAULT_gridHeight;
 
 pvector_t ass_path;
-pvector_t bfs_path;
+pvector_t bestfs_path;
 
-bfs_t* bfs;
+bestfs_t* bfs;
 
 int main( int argc, char *argv[] )
 {
@@ -163,9 +163,9 @@ int main( int argc, char *argv[] )
 
 void initialize( )
 {
-	pvector_create( &bfs_path, 1, malloc, free );
+	pvector_create( &bestfs_path, 1, malloc, free );
 	pvector_create( &ass_path, 1, malloc, free );
-	bfs = bfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
+	bfs = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -222,9 +222,9 @@ void initialize( )
 
 void deinitialize( )
 {
-	pvector_destroy( &bfs_path );
+	pvector_destroy( &bestfs_path );
 	pvector_destroy( &ass_path );
-	bfs_destroy( &bfs );
+	bestfs_destroy( &bfs );
 	free( tiles );
 	glDeleteLists( blockList, 2 );
 }
@@ -294,7 +294,7 @@ void render( )
 	draw_tiles( );
 
 	draw_path( &ass_path, assPathColor );
-	draw_path( &bfs_path, bfsPathColor );
+	draw_path( &bestfs_path, bfsPathColor );
 
 	// draw grid...
 	if( gridWidth * gridWidth <= 1600 )
@@ -392,22 +392,22 @@ void keyboard_keypress( unsigned char key, int x, int y )
 			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
 			tile_t *p_end   = &tiles[ end.y * gridWidth + end.x ];
 
-			boolean found = bfs_find( bfs, p_start, p_end );
+			boolean found = bestfs_find( bfs, p_start, p_end );
 
 			if( found )
 			{
-				bfs_node_t* p_node;
-				pvector_clear( &bfs_path );
+				bestfs_node_t* p_node;
+				pvector_clear( &bestfs_path );
 
-				for( p_node = bfs_first_node( bfs );
+				for( p_node = bestfs_first_node( bfs );
 				     p_node != NULL;
-				     p_node = bfs_next_node( p_node ) )
+				     p_node = bestfs_next_node( p_node ) )
 				{
-					pvector_push( &bfs_path, (void*) bfs_state(p_node) );
+					pvector_push( &bestfs_path, (void*) bestfs_state(p_node) );
 				}
 			}
 			
-			bfs_cleanup( bfs );
+			bestfs_cleanup( bfs );
 			glutPostRedisplay( );
 			break;
 		}
@@ -425,22 +425,22 @@ void keyboard_keypress( unsigned char key, int x, int y )
 		}
 		case '4':
 		{
-			bfs_set_successors_fxn( bfs, tile_successors4 );
+			bestfs_set_successors_fxn( bfs, tile_successors4 );
 			break;
 		}
 		case '8':
 		{
-			bfs_set_successors_fxn( bfs, tile_successors8 );
+			bestfs_set_successors_fxn( bfs, tile_successors8 );
 			break;
 		}
 		case 'h':
 		{
-			bfs_set_heuristic_fxn( bfs, tile_manhattan_distance );
+			bestfs_set_heuristic_fxn( bfs, tile_manhattan_distance );
 			break;
 		}
 		case 'H':
 		{
-			bfs_set_heuristic_fxn( bfs, tile_euclidean_distance );
+			bestfs_set_heuristic_fxn( bfs, tile_euclidean_distance );
 			break;
 		}
 		default:
@@ -533,7 +533,7 @@ void write_text( void *font, const char* text, int x, int y, float r, float g, f
 void reset( boolean bRandomize )
 {
 	pvector_clear( &ass_path );
-	pvector_clear( &bfs_path );
+	pvector_clear( &bestfs_path );
 
 	for( unsigned int y = 0; y < gridHeight; y++ )
 	{
