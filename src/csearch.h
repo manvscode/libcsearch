@@ -43,10 +43,21 @@ typedef void    (*successors_fxn)         ( const void* state, pvector_t* p_succ
 /*
  *  Breadth First Search Algorithm
  *
- *  Best-first search is a method of combinatorial search where 
- *  a heuristic function is used to guide the search toward the 
- *  goal. The heuristic function takes two nodes as input and 
- *  evaluates how likely that node will lead toward the goal.
+ *  Breadth First Search is an uninformed search method that tries
+ *  to systematically examine every state until it finds the goal
+ *  state, or all states have been examined. In other words, it 
+ *  exhaustively searches the entire graph or sequence without 
+ *  considering the goal until it finds it.
+ *  -----------------------------------------------------------
+ *  Advantages
+ *
+ *  - Guaranteed to converge to a solution.
+ *  - Easy to understand
+ *  -----------------------------------------------------------
+ *  Disadvantages
+ *
+ *  - Most of the time, it will examine more states than needed
+ *    at the expense of CPU.
  */
 struct breadthfs_algorithm;
 typedef struct breadthfs_algorithm breadthfs_t;
@@ -87,6 +98,8 @@ breadthfs_node_t* breadthdfs_next_node          ( const breadthfs_node_t* p_node
  *  -----------------------------------------------------------
  *  Disadvantages
  *
+ *  - The algorithm may not converge on a solution when one exists
+ *    if a poor heuristic is used.
  *  - The results of this algorithm can appear silly or stupid at 
  *    times.
  */
