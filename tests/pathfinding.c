@@ -57,8 +57,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			66
-#define DEFAULT_gridHeight			60
+#define DEFAULT_gridWidth			40
+#define DEFAULT_gridHeight			40
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -727,9 +727,9 @@ unsigned int tile_cost( const void *t1, const void *t2 )
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
-#if 0
+#if 1
 	//return tile_euclidean_distance( p_tile1, p_tile2 );
-	return abs(p_tile1->position.x + p_tile2->position.x) + abs(p_tile1->position.y + p_tile2->position.y);
+	return abs(p_tile1->position.x - p_tile2->position.x) + abs(p_tile1->position.y - p_tile2->position.y);
 #else
 	return 1;
 #endif
