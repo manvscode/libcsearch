@@ -50,6 +50,7 @@ static void tile_successors4   ( const void* state, pvector_t* p_successors );
 static void tile_successors8   ( const void* state, pvector_t* p_successors );
 static int tile_manhattan_distance( const void *t1, const void *t2 );
 static int tile_euclidean_distance( const void *t1, const void *t2 );
+static unsigned int tile_cost( const void *t1, const void *t2 );
 
 int windowWidth;
 int windowHeight;
@@ -84,17 +85,21 @@ coordinate_t end;
 tile_t *tiles = NULL;
 unsigned int blockList = 0, gridList = 0;
 
-GLfloat assPathColor[] = { 6.0f, 6.0f, 0.0f, 0.7f };
 GLfloat bfsPathColor[] = { 0.0f, 6.0f, 6.0f, 0.7f };
+GLfloat dijkstraPathColor[] = { 6.0f, 0.0f, 6.0f, 0.7f };
+GLfloat assPathColor[] = { 6.0f, 6.0f, 0.0f, 0.7f };
 
 
 unsigned int gridWidth = DEFAULT_gridWidth;
 unsigned int gridHeight = DEFAULT_gridHeight;
 
-pvector_t ass_path;
 pvector_t bestfs_path;
+pvector_t dijkstra_path;
+pvector_t ass_path;
 
-bestfs_t* bfs;
+bestfs_t*   bfs;
+dijkstra_t* dijkstra;
+astar_t*    ass;
 
 int main( int argc, char *argv[] )
 {
@@ -164,8 +169,12 @@ int main( int argc, char *argv[] )
 void initialize( )
 {
 	pvector_create( &bestfs_path, 1, malloc, free );
+	pvector_create( &dijkstra_path, 1, malloc, free );
 	pvector_create( &ass_path, 1, malloc, free );
-	bfs = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
+
+	bfs      = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
+	dijkstra = dijkstra_create( pointer_hash, tile_cost, tile_successors8 );
+	ass      = astar_create( );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -223,8 +232,13 @@ void initialize( )
 void deinitialize( )
 {
 	pvector_destroy( &bestfs_path );
+	pvector_destroy( &dijkstra_path );
 	pvector_destroy( &ass_path );
+
 	bestfs_destroy( &bfs );
+	dijkstra_destroy( &dijkstra );
+	astar_destroy( &ass );
+
 	free( tiles );
 	glDeleteLists( blockList, 2 );
 }
@@ -293,8 +307,9 @@ void render( )
 
 	draw_tiles( );
 
-	draw_path( &ass_path, assPathColor );
 	draw_path( &bestfs_path, bfsPathColor );
+	draw_path( &dijkstra_path, dijkstraPathColor );
+	draw_path( &ass_path, assPathColor );
 
 	// draw grid...
 	if( gridWidth * gridWidth <= 1600 )
@@ -408,6 +423,34 @@ void keyboard_keypress( unsigned char key, int x, int y )
 			}
 			
 			bestfs_cleanup( bfs );
+			glutPostRedisplay( );
+			break;
+		}
+		case 'D':
+		case 'd':
+		{ 
+			if( start.x == -1 || start.y == -1 ) return;
+			if( end.x == -1 || end.y == -1 ) return;
+
+			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
+			tile_t *p_end   = &tiles[ end.y * gridWidth + end.x ];
+
+			boolean found = dijkstra_find( dijkstra, p_start, p_end );
+
+			if( found )
+			{
+				dijkstra_node_t* p_node;
+				pvector_clear( &dijkstra_path );
+
+				for( p_node = dijkstra_first_node( dijkstra );
+				     p_node != NULL;
+				     p_node = dijkstra_next_node( p_node ) )
+				{
+					pvector_push( &dijkstra_path, (void*) dijkstra_state(p_node) );
+				}
+			}
+			
+			dijkstra_cleanup( dijkstra );
 			glutPostRedisplay( );
 			break;
 		}
@@ -532,8 +575,9 @@ void write_text( void *font, const char* text, int x, int y, float r, float g, f
 
 void reset( boolean bRandomize )
 {
-	pvector_clear( &ass_path );
 	pvector_clear( &bestfs_path );
+	pvector_clear( &dijkstra_path );
+	pvector_clear( &ass_path );
 
 	for( unsigned int y = 0; y < gridHeight; y++ )
 	{
@@ -674,4 +718,13 @@ int tile_euclidean_distance( const void *t1, const void *t2 )
 	const tile_t* p_tile2 = t2;
 
 	return euclidean_distance( &p_tile1->position, &p_tile2->position );
+}
+
+unsigned int tile_cost( const void *t1, const void *t2 )
+{
+	const tile_t* p_tile1 = t1;
+	const tile_t* p_tile2 = t2;
+
+	return abs(p_tile1->position.x + p_tile2->position.x) +
+	       abs(p_tile1->position.y + p_tile2->position.y);
 }

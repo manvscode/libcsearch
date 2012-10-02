@@ -151,9 +151,9 @@ void             dijkstra_set_cost_fxn       ( dijkstra_t* p_dijkstra, nonnegati
 void             dijkstra_set_successors_fxn ( dijkstra_t* p_dijkstra, successors_fxn successors_of );
 boolean          dijkstra_find               ( dijkstra_t* p_dijkstra, const void* start, const void* end );
 void             dijkstra_cleanup            ( dijkstra_t* p_dijkstra );
-//dijkstra_node_t* dijkstra_first_node         ( const dijkstra_t* p_dijkstra );
-//const void*      dijkstra_state              ( const dijkstra_node_t* p_node );
-//dijkstra_node_t* dijkstra_next_node          ( const dijkstra_node_t* p_node );
+dijkstra_node_t* dijkstra_first_node         ( const dijkstra_t* p_dijkstra );
+const void*      dijkstra_state              ( const dijkstra_node_t* p_node );
+dijkstra_node_t* dijkstra_next_node          ( const dijkstra_node_t* p_node );
 
 
 /*

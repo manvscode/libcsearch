@@ -155,6 +155,7 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
  */
 boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* end )
 {
+	assert( p_dijkstra );
 	boolean found = FALSE;
 	int i;
 	pvector_t successors;	
@@ -205,7 +206,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 
 				/* i.) If S is not in the closed list, continue. */
 				void* found_node;
-				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
+				//if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
 				{
 					/* NOTE: The closed list is used to prevent re-examining
  					 * nodes that already have the minimal cost computed in
@@ -215,7 +216,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
  					 * it may improve performance.  Profiling will be needed
  					 * to determine this.
 					 */
-					continue;
+					//continue;
 				}
 
 				/* ii.) If S is in the open list, update its cost with the cost of 
@@ -265,6 +266,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 
 void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 {
+	assert( p_dijkstra );
 	assert( hash_map_size(&p_dijkstra->open_hash_map) == pbheap_size(&p_dijkstra->open_list) );
 	#ifdef _BFS_DEBUG
 	size_t size2 = hash_map_size(&p_dijkstra->open_list);	
@@ -304,5 +306,23 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 	pbheap_clear( &p_dijkstra->open_list );
 	hash_map_clear( &p_dijkstra->open_hash_map );
 	tree_map_clear( &p_dijkstra->closed_list );
+}
+
+dijkstra_node_t* dijkstra_first_node( const dijkstra_t* p_dijkstra )
+{
+	assert( p_dijkstra );
+	return p_dijkstra->node_path;
+}
+
+const void* dijkstra_state( const dijkstra_node_t* p_node )
+{
+	assert( p_node );
+	return p_node->state;
+}
+
+dijkstra_node_t* dijkstra_next_node( const dijkstra_node_t* p_node )
+{
+	assert( p_node );
+	return p_node->parent;
 }
 
