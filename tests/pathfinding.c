@@ -57,8 +57,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			23
-#define DEFAULT_gridHeight			20
+#define DEFAULT_gridWidth			66
+#define DEFAULT_gridHeight			60
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -172,8 +172,8 @@ void initialize( )
 	pvector_create( &dijkstra_path, 1, malloc, free );
 	pvector_create( &ass_path, 1, malloc, free );
 
-	bfs      = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors8 );
-	dijkstra = dijkstra_create( pointer_hash, tile_cost, tile_successors8 );
+	bfs      = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors4 );
+	dijkstra = dijkstra_create( pointer_hash, tile_cost, tile_successors4 );
 	ass      = astar_create( );
 
 	glDisable( GL_DEPTH_TEST );
@@ -469,11 +469,13 @@ void keyboard_keypress( unsigned char key, int x, int y )
 		case '4':
 		{
 			bestfs_set_successors_fxn( bfs, tile_successors4 );
+			dijkstra_set_successors_fxn( dijkstra, tile_successors4 );
 			break;
 		}
 		case '8':
 		{
 			bestfs_set_successors_fxn( bfs, tile_successors8 );
+			dijkstra_set_successors_fxn( dijkstra, tile_successors8 );
 			break;
 		}
 		case 'h':
@@ -586,7 +588,7 @@ void reset( boolean bRandomize )
 			unsigned int index = y * gridWidth + x;
 
 			if( bRandomize )
-				tiles[ index ].is_walkable = ( rand() % 1000 ) > 200 ? TRUE : FALSE;
+				tiles[ index ].is_walkable = (rand() % 1000) > 200 ;
 			else
 				tiles[ index ].is_walkable =  TRUE;
 
@@ -648,8 +650,8 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 
 			if( successorY < 0 ) continue;
 			if( successorX < 0 ) continue;
-			if( successorY >= gridWidth ) continue;
-			if( successorX >= gridHeight ) continue;
+			if( successorY >= gridHeight ) continue;
+			if( successorX >= gridWidth ) continue;
 
 			int index = successorY * gridWidth + successorX;
 
@@ -725,11 +727,9 @@ unsigned int tile_cost( const void *t1, const void *t2 )
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
-#if 1
-	return tile_euclidean_distance( p_tile1, p_tile2 );
-#elif 0
-	return abs(p_tile1->position.x + p_tile2->position.x) +
-	       abs(p_tile1->position.y + p_tile2->position.y);
+#if 0
+	//return tile_euclidean_distance( p_tile1, p_tile2 );
+	return abs(p_tile1->position.x + p_tile2->position.x) + abs(p_tile1->position.y + p_tile2->position.y);
 #else
 	return 1;
 #endif
