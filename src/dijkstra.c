@@ -128,6 +128,31 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
 	}
 }
 
+/*
+ * Dijkstra's Algorithm
+ * ------------------------------------------------------------------------
+ *   Input: The start node and goal nodes.
+ *  Output: True if goal node is found, false if goal node cannot be found 
+ *          from the start node; Shortest path between start to goal.
+ * ------------------------------------------------------------------------
+ * 1.) Initialize the cost for all nodes to be infinity except for the start
+ *     node. Set the start node to have 0 cost. Set the open list and closed 
+ *     list to be empty.
+ * 2.) Add the start node to the open list.
+ * 3.) While the open list is not empty, do the following:
+ *    a.) Get a node from the open list, call it N.
+ *    b.) If N is the goal node, return true.
+ *    c.) Get the successor nodes of N.
+ *    d.) For each successor node S:
+ *    	  	 i.) If S is in the closed list, continue.
+ *    		ii.) If S is in the open list, update its cost with the cost of 
+ *    		     N plus the cost to go from N to S, if it is better.  Make 
+ *    		     sure to resort the open list.
+ *    	   iii.) If S is not in the open list, add it with the cost of N plus 
+ *    	         the cost to go from N to S.
+      e.) Add N to the closed list.
+ * 4.) Return false.
+ */
 boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* end )
 {
 	boolean found = FALSE;
@@ -140,7 +165,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 
 	dijkstra_node_t* p_node = (dijkstra_node_t*) malloc( sizeof(dijkstra_node_t) );
 	p_node->parent = NULL;
-	p_node->c      = INFINITY;
+	p_node->c      = 0;
 	p_node->state  = start;
 	
 	#ifdef _BFS_DEBUG
@@ -154,20 +179,23 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
  	/* 3.) While the open list is not empty, do the following: */
 	while( !found && pbheap_size(&p_dijkstra->open_list) > 0 )
 	{
- 		/* a.) Get a node from the open list, call it p_current_node. */
+ 		/* a.) Get a node from the open list, call it N. */
 		dijkstra_node_t* p_current_node = pbheap_peek( &p_dijkstra->open_list );
 		pbheap_pop( &p_dijkstra->open_list );
 		hash_map_remove( &p_dijkstra->open_hash_map, p_current_node->state );
 					
-		/* b.) If p_current_node is the goal node, return true. */
+		/* b.) If N is the goal node, return true. */
 		if( p_current_node->state == end )
 		{
+			/* NOTE: This final node will not have the final cost
+ 			 * in the dijkstra_node_t object. 
+ 			 */
 			p_dijkstra->node_path = p_current_node;
 			found = TRUE;
 		}
 		else
 		{
-			/* c.) Get the successor nodes of p_current_node. */
+			/* c.) Get the successor nodes of N. */
 			p_dijkstra->successors_of( p_current_node->state, &successors ); 
 
 			/* d.) For each successor node S: */
@@ -179,20 +207,43 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 				void* found_node;
 				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
 				{
+					/* NOTE: The closed list is used to prevent re-examining
+ 					 * nodes that already have the minimal cost computed in
+ 					 * them. Without this, nodes would be added to the open 
+ 					 * list without ever having a hope of being more optimal
+ 					 * than already computed. Although this is not needed,
+ 					 * it may improve performance.  Profiling will be needed
+ 					 * to determine this.
+					 */
 					continue;
 				}
 
-				/* ii.) If S is in open list: */
+				/* ii.) If S is in the open list, update its cost with the cost of 
+				 *      N plus the cost to go from N to S, if it is better.  Make 
+				 *      sure to resort the open list.
+				 */
 				if( hash_map_find( &p_dijkstra->open_hash_map, successor_state, &found_node ) )
 				{
 					dijkstra_node_t* p_found_node = (dijkstra_node_t*) found_node;
-					// TODO:
+
+					int c = p_dijkstra->cost( p_current_node->state, successor_state );
+
+					if( c < p_found_node->c )
+					{
+						p_found_node->c      = c;
+						p_found_node->parent = p_current_node;
+
+						pbheap_reheapify( &p_dijkstra->open_list );
+					}
 				}
-				else /* iii.) If S is not in the open list, then add S to the open list. */
+				else 
 				{	
+					/* iii.) If S is not in the open list, add it with the cost of N
+					 *       plus the cost to go from N to S.
+					 */
 					dijkstra_node_t* p_new_node = (dijkstra_node_t*) malloc( sizeof(dijkstra_node_t) );
 					p_new_node->parent     = p_current_node;
-					p_new_node->c          = INFINITY;
+					p_new_node->c          = p_current_node->c + p_dijkstra->cost( p_current_node->state, successor_state );
 					p_new_node->state      = successor_state;
 
 					pbheap_push( &p_dijkstra->open_list, p_new_node );
