@@ -65,9 +65,11 @@ static int pointer_compare( const void* p_n1, const void* p_n2 )
 	return (int) diff;
 }
 
+#define default_cost_compare( c1, c2 )      ((c2) - (c1))
+
 static int best_cost_compare( const void* p_n1, const void* p_n2 )
 {
-	return ((dijkstra_node_t*)p_n1)->c - ((dijkstra_node_t*)p_n2)->c;
+	return default_cost_compare(((dijkstra_node_t*)p_n1)->c,  ((dijkstra_node_t*)p_n2)->c);
 }
 
 dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of )
@@ -206,7 +208,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 
 				/* i.) If S is not in the closed list, continue. */
 				void* found_node;
-				//if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
+				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
 				{
 					/* NOTE: The closed list is used to prevent re-examining
  					 * nodes that already have the minimal cost computed in
@@ -216,7 +218,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
  					 * it may improve performance.  Profiling will be needed
  					 * to determine this.
 					 */
-					//continue;
+					continue;
 				}
 
 				/* ii.) If S is in the open list, update its cost with the cost of 
@@ -229,7 +231,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 
 					int c = p_dijkstra->cost( p_current_node->state, successor_state );
 
-					if( c < p_found_node->c )
+					if( default_cost_compare( c, p_found_node->c ) < 0 )
 					{
 						p_found_node->c      = c;
 						p_found_node->parent = p_current_node;

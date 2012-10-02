@@ -725,6 +725,12 @@ unsigned int tile_cost( const void *t1, const void *t2 )
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
+#if 1
+	return tile_euclidean_distance( p_tile1, p_tile2 );
+#elif 0
 	return abs(p_tile1->position.x + p_tile2->position.x) +
 	       abs(p_tile1->position.y + p_tile2->position.y);
+#else
+	return 1;
+#endif
 }
