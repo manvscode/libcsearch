@@ -32,17 +32,17 @@
 
 struct breadthfs_node {
 	struct breadthfs_node* parent;
-	const void* state;
+	const void* state; /* vertex */
 };
 
 struct breadthfs_algorithm {
-	compare_fxn        compare;
-	successors_fxn     successors_of;
-	breadthfs_node_t*  node_path;
+	//compare_fxn     compare;
+	successors_fxn    successors_of;
+	breadthfs_node_t* node_path;
 
-	dlist_t                open_list; /* list of breadthfs_node_t* */
-	hash_map_t             open_hash_map; /* (state, breadthfs_node_t*) */
-	tree_map_t             closed_list; /* (state, breadthfs_node_t*) */
+	dlist_t    open_list; /* list of breadthfs_node_t* */
+	hash_map_t open_hash_map; /* (state, breadthfs_node_t*) */
+	tree_map_t closed_list; /* (state, breadthfs_node_t*) */
 
 	#ifdef _BFS_DEBUG
 	size_t allocations;
@@ -65,13 +65,13 @@ static int pointer_compare( const void* p_n1, const void* p_n2 )
 	return (int) diff;
 }
 
-breadthfs_t* breadthfs_create( state_hash_fxn state_hasher, compare_fxn compare, successors_fxn successors_of )
+breadthfs_t* breadthfs_create( state_hash_fxn state_hasher/*, compare_fxn compare*/, successors_fxn successors_of )
 {
 	breadthfs_t* p_bfs = (breadthfs_t*) malloc( sizeof(breadthfs_t) );
 
 	if( p_bfs )
 	{
-		p_bfs->compare     = compare;
+		//p_bfs->compare     = compare;
 		p_bfs->successors_of = successors_of;
 		p_bfs->node_path     = NULL;
 		#ifdef _BFS_DEBUG
@@ -99,7 +99,7 @@ void breadthfs_destroy( breadthfs_t** p_bfs )
 		*p_bfs = NULL;
 	}
 }
-
+/*
 void breadthfs_set_compare_fxn( breadthfs_t* p_bfs, compare_fxn compare )
 {
 	if( p_bfs )
@@ -107,11 +107,13 @@ void breadthfs_set_compare_fxn( breadthfs_t* p_bfs, compare_fxn compare )
 		p_bfs->compare = compare;
 	}
 }
+*/
 
 void breadthfs_set_successors_fxn( breadthfs_t* p_bfs, successors_fxn successors_of )
 {
 	if( p_bfs )
 	{
+		assert( successors_of );
 		p_bfs->successors_of = successors_of;
 	}
 }

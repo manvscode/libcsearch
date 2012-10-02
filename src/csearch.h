@@ -30,14 +30,15 @@ extern "C" {
 /*
  *  Function Callbacks
  */
-typedef void*   (*alloc_fxn)              ( size_t size );
-typedef void    (*free_fxn)               ( void *data );
-typedef size_t  (*state_hash_fxn)         ( const void* state );
-typedef int     (*compare_fxn)            ( const void* state1, const void* state2 );
-typedef int     (*heuristic_fxn)          ( const void* state1, const void* state2 );
-typedef int     (*cost_fxn)               ( const void* state1, const void* state2 );
-typedef int     (*heuristic_comparer_fxn) ( int h1, int h2 );
-typedef void    (*successors_fxn)         ( const void* state, pvector_t* p_successors );
+typedef void*        (*alloc_fxn)              ( size_t size );
+typedef void         (*free_fxn)               ( void *data );
+typedef size_t       (*state_hash_fxn)         ( const void* state );
+typedef int          (*compare_fxn)            ( const void* state1, const void* state2 );
+typedef int          (*heuristic_fxn)          ( const void* state1, const void* state2 );
+typedef int          (*cost_fxn)               ( const void* state1, const void* state2 );
+typedef unsigned int (*nonnegative_cost_fxn)   ( const void* state1, const void* state2 );
+typedef int          (*heuristic_comparer_fxn) ( int h1, int h2 );
+typedef void         (*successors_fxn)         ( const void* state, pvector_t* p_successors );
 
 
 /*
@@ -65,9 +66,8 @@ typedef struct breadthfs_algorithm breadthfs_t;
 struct breadthfs_node;
 typedef struct breadthfs_node breadthfs_node_t;
 
-breadthfs_t*      breadthfs_create             ( state_hash_fxn state_hasher, compare_fxn compare, successors_fxn successors_of );
+breadthfs_t*      breadthfs_create             ( state_hash_fxn state_hasher, successors_fxn successors_of );
 void              breadthfs_destroy            ( breadthfs_t** p_bfs );
-void              breadthfs_set_compare_fxn    ( breadthfs_t* p_bfs, compare_fxn compare );
 void              breadthfs_set_successors_fxn ( breadthfs_t* p_bfs, successors_fxn successors_of );
 boolean           breadthfs_find               ( breadthfs_t* p_bfs, const void* start, const void* end );
 void              breadthfs_cleanup            ( breadthfs_t* p_bfs );
@@ -110,12 +110,12 @@ struct bestfs_node;
 typedef struct bestfs_node bestfs_node_t;
 
 bestfs_t*      bestfs_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
-void           bestfs_destroy            ( bestfs_t** p_bfs );
-void           bestfs_set_heuristic_fxn  ( bestfs_t* p_bfs, heuristic_fxn heuristic );
-void           bestfs_set_successors_fxn ( bestfs_t* p_bfs, successors_fxn successors_of );
-boolean        bestfs_find               ( bestfs_t* p_bfs, const void* start, const void* end );
-void           bestfs_cleanup            ( bestfs_t* p_bfs );
-bestfs_node_t* bestfs_first_node         ( const bestfs_t* p_bfs );
+void           bestfs_destroy            ( bestfs_t** p_best );
+void           bestfs_set_heuristic_fxn  ( bestfs_t* p_best, heuristic_fxn heuristic );
+void           bestfs_set_successors_fxn ( bestfs_t* p_best, successors_fxn successors_of );
+boolean        bestfs_find               ( bestfs_t* p_best, const void* start, const void* end );
+void           bestfs_cleanup            ( bestfs_t* p_best );
+bestfs_node_t* bestfs_first_node         ( const bestfs_t* p_best );
 const void*    bestfs_state              ( const bestfs_node_t* p_node );
 bestfs_node_t* bestfs_next_node          ( const bestfs_node_t* p_node );
 
@@ -142,9 +142,12 @@ bestfs_node_t* bestfs_next_node          ( const bestfs_node_t* p_node );
 struct dijkstra_algorithm;
 typedef struct dijkstra_algorithm dijkstra_t;
 
-dijkstra_t*      dijkstra_create             ( cost_fxn cost, successors_fxn successors_of );
+struct dijkstra_node;
+typedef struct dijkstra_node dijkstra_node_t;
+
+dijkstra_t*      dijkstra_create             ( state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of );
 void             dijkstra_destroy            ( dijkstra_t** p_dijkstra );
-void             dijkstra_set_cost_fxn       ( dijkstra_t* p_dijkstra, cost_fxn cost );
+void             dijkstra_set_cost_fxn       ( dijkstra_t* p_dijkstra, nonnegative_cost_fxn cost );
 void             dijkstra_set_successors_fxn ( dijkstra_t* p_dijkstra, successors_fxn successors_of );
 boolean          dijkstra_find               ( dijkstra_t* p_dijkstra, const void* start, const void* end );
 void             dijkstra_cleanup            ( dijkstra_t* p_dijkstra );

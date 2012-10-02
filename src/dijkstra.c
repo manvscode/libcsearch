@@ -19,21 +19,79 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <stddef.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <limits.h>
 #include <assert.h>
+#include <libcollections/alloc.h>
+#include <libcollections/bheap.h>
+#include <libcollections/hash-map.h>
+#include <libcollections/tree-map.h>
+#include <libcollections/vector.h>
 #include "csearch.h"
 
-struct dijkstra_algorithm {
-	const void* state;
+
+#define INFINITY       UINT_MAX
+
+struct dijkstra_node {
+	struct dijkstra_node* parent;
+	unsigned int c; /* cost */
+	const void* state; /* vertex */
 };
 
-dijkstra_t* dijkstra_create( cost_fxn cost, successors_fxn successors_of )
+struct dijkstra_algorithm {
+	nonnegative_cost_fxn cost;
+	successors_fxn       successors_of;
+	dijkstra_node_t*     node_path;
+
+	pbheap_t         open_list; /* list of dijkstra_node_t* */
+	hash_map_t       open_hash_map; /* (state, dijkstra_node_t*) */
+	tree_map_t       closed_list; /* (state, dijkstra_node_t*) */
+
+	#ifdef _BFS_DEBUG
+	size_t allocations;
+	#endif
+};
+
+static boolean nop_keyval_fxn( void *key, void *value )
+{
+	return TRUE;
+}
+
+static int pointer_compare( const void* p_n1, const void* p_n2 )
+{
+	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
+	return (int) diff;
+}
+
+static int best_cost_compare( const void* p_n1, const void* p_n2 )
+{
+	return ((dijkstra_node_t*)p_n1)->c - ((dijkstra_node_t*)p_n2)->c;
+}
+
+dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of )
 {
 	dijkstra_t* p_dijkstra = (dijkstra_t*) malloc( sizeof(dijkstra_t) );
 
 	if( p_dijkstra )
 	{
-		// TODO: initialize
+		p_dijkstra->cost          = cost;
+		p_dijkstra->successors_of = successors_of;
+		p_dijkstra->node_path     = NULL;
+		#ifdef _BFS_DEBUG
+		p_dijkstra->allocations   = 0;
+		#endif
+
+		pbheap_create( &p_dijkstra->open_list, 128, 
+					  (heap_compare_function) best_cost_compare, 
+					  malloc, free );
+
+		hash_map_create( &p_dijkstra->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
+						 state_hasher, nop_keyval_fxn, pointer_compare, 
+						 malloc, free );
+
+		tree_map_create( &p_dijkstra->closed_list, nop_keyval_fxn, pointer_compare, malloc, free );
 	}
 
 	return p_dijkstra;
@@ -43,8 +101,157 @@ void dijkstra_destroy( dijkstra_t** p_dijkstra )
 {
 	if( p_dijkstra && *p_dijkstra )
 	{
+		dijkstra_cleanup( *p_dijkstra );
+		pbheap_destroy( &(*p_dijkstra)->open_list );		
+		hash_map_destroy( &(*p_dijkstra)->open_hash_map );		
+		tree_map_destroy( &(*p_dijkstra)->closed_list );		
 		free( *p_dijkstra );
 		*p_dijkstra = NULL;
 	}
+}
+
+void dijkstra_set_cost_fxn( dijkstra_t* p_dijkstra, nonnegative_cost_fxn cost )
+{
+	if( p_dijkstra )
+	{
+		assert( cost );
+		p_dijkstra->cost = cost;
+	}
+}
+
+void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn successors_of )
+{
+	if( p_dijkstra )
+	{
+		assert( successors_of );
+		p_dijkstra->successors_of = successors_of;
+	}
+}
+
+boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* end )
+{
+	boolean found = FALSE;
+	int i;
+	pvector_t successors;	
+	pvector_create( &successors, 8, malloc, free );
+
+ 	/* 1.) Set the open list and closed list to be empty. */
+	dijkstra_cleanup( p_dijkstra );
+
+	dijkstra_node_t* p_node = (dijkstra_node_t*) malloc( sizeof(dijkstra_node_t) );
+	p_node->parent = NULL;
+	p_node->c      = INFINITY;
+	p_node->state  = start;
+	
+	#ifdef _BFS_DEBUG
+	p_dijkstra->allocations++;
+	#endif
+
+ 	/* 2.) Add the start node to the open list. */
+	pbheap_push( &p_dijkstra->open_list, p_node );
+	hash_map_insert( &p_dijkstra->open_hash_map, p_node->state, p_node );
+
+ 	/* 3.) While the open list is not empty, do the following: */
+	while( !found && pbheap_size(&p_dijkstra->open_list) > 0 )
+	{
+ 		/* a.) Get a node from the open list, call it p_current_node. */
+		dijkstra_node_t* p_current_node = pbheap_peek( &p_dijkstra->open_list );
+		pbheap_pop( &p_dijkstra->open_list );
+		hash_map_remove( &p_dijkstra->open_hash_map, p_current_node->state );
+					
+		/* b.) If p_current_node is the goal node, return true. */
+		if( p_current_node->state == end )
+		{
+			p_dijkstra->node_path = p_current_node;
+			found = TRUE;
+		}
+		else
+		{
+			/* c.) Get the successor nodes of p_current_node. */
+			p_dijkstra->successors_of( p_current_node->state, &successors ); 
+
+			/* d.) For each successor node S: */
+			for( i = 0; i < pvector_size(&successors); i++ )
+			{
+				const void* successor_state = pvector_get( &successors, i );
+
+				/* i.) If S is not in the closed list, continue. */
+				void* found_node;
+				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
+				{
+					continue;
+				}
+
+				/* ii.) If S is in open list: */
+				if( hash_map_find( &p_dijkstra->open_hash_map, successor_state, &found_node ) )
+				{
+					dijkstra_node_t* p_found_node = (dijkstra_node_t*) found_node;
+					// TODO:
+				}
+				else /* iii.) If S is not in the open list, then add S to the open list. */
+				{	
+					dijkstra_node_t* p_new_node = (dijkstra_node_t*) malloc( sizeof(dijkstra_node_t) );
+					p_new_node->parent     = p_current_node;
+					p_new_node->c          = INFINITY;
+					p_new_node->state      = successor_state;
+
+					pbheap_push( &p_dijkstra->open_list, p_new_node );
+					hash_map_insert( &p_dijkstra->open_hash_map, p_new_node->state, p_new_node );
+		
+					#ifdef _BFS_DEBUG
+					p_dijkstra->allocations++;
+					#endif
+				}
+			}
+		}
+
+		/* e.) Add p_current_node to the closed list. */
+		tree_map_insert( &p_dijkstra->closed_list, p_current_node->state, p_current_node );
+	}
+
+	return found;
+}
+
+void dijkstra_cleanup( dijkstra_t* p_dijkstra )
+{
+	assert( hash_map_size(&p_dijkstra->open_hash_map) == pbheap_size(&p_dijkstra->open_list) );
+	#ifdef _BFS_DEBUG
+	size_t size2 = hash_map_size(&p_dijkstra->open_list);	
+	size_t size3 = tree_map_size(&p_dijkstra->closed_list);	
+	assert( size2 + size3 == p_dijkstra->allocations );
+	#endif
+	
+	p_dijkstra->node_path = NULL;
+
+	hash_map_iterator_t open_itr;
+	tree_map_iterator_t closed_itr;
+	
+	hash_map_iterator( &p_dijkstra->open_hash_map, &open_itr );
+
+	// free everything on the open list.
+	while( hash_map_iterator_next( &open_itr ) )
+	{
+		dijkstra_node_t* p_node = hash_map_iterator_value( &open_itr );
+		free( p_node );	
+		#ifdef _BFS_DEBUG
+		p_dijkstra->allocations--;
+		#endif
+	}
+
+	// free everything on the closed list.
+	for( closed_itr = tree_map_begin( &p_dijkstra->closed_list );
+	     closed_itr != tree_map_end( );
+	     closed_itr = tree_map_next( closed_itr ) )
+	{
+		free( closed_itr->value );	
+		#ifdef _BFS_DEBUG
+		p_dijkstra->allocations--;
+		#endif
+	}
+
+	// empty out the data structures
+	pbheap_clear( &p_dijkstra->open_list );
+	hash_map_clear( &p_dijkstra->open_hash_map );
+	tree_map_clear( &p_dijkstra->closed_list );
 }
 
