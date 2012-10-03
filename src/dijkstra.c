@@ -263,7 +263,9 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 					p_dijkstra->allocations++;
 					#endif
 				}
-			}
+			} /* for */
+			
+			pvector_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
