@@ -249,7 +249,9 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 					p_best->allocations++;
 					#endif
 				}
-			}
+			} /* for */
+			
+			pvector_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
