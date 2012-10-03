@@ -210,7 +210,7 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 			{
 				const void* successor_state = pvector_get( &successors, i );
 
-				/* i.) If S is not in the closed list, continue. */
+				/* i.) If S is in the closed list, continue. */
 				void* found_node;
 				if( tree_map_find( &p_best->closed_list, successor_state, &found_node ) )
 				{

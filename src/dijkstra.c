@@ -213,7 +213,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 			{
 				const void* successor_state = pvector_get( &successors, i );
 
-				/* i.) If S is not in the closed list, continue. */
+				/* i.) If S is in the closed list, continue. */
 				void* found_node;
 				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
 				{
