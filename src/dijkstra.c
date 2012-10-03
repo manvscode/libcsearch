@@ -29,10 +29,9 @@
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
 #include <libcollections/vector.h>
+#include <libcollections/bench-mark.h>
 #include "csearch.h"
 
-
-#define INFINITY       UINT_MAX
 
 struct dijkstra_node {
 	struct dijkstra_node* parent;
@@ -49,8 +48,9 @@ struct dijkstra_algorithm {
 	hash_map_t       open_hash_map; /* (state, dijkstra_node_t*) */
 	tree_map_t       closed_list; /* (state, dijkstra_node_t*) */
 
-	#ifdef _BFS_DEBUG
-	size_t allocations;
+	#ifdef DEBUG_DIJKSTRA
+	size_t       allocations;
+	bench_mark_t bm;
 	#endif
 };
 
@@ -81,8 +81,9 @@ dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn c
 		p_dijkstra->cost          = cost;
 		p_dijkstra->successors_of = successors_of;
 		p_dijkstra->node_path     = NULL;
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_DIJKSTRA
 		p_dijkstra->allocations   = 0;
+		p_dijkstra->bm            = bench_mark_create( "Dijkstra's Search Algorithm" );
 		#endif
 
 		pbheap_create( &p_dijkstra->open_list, 128, 
@@ -103,6 +104,10 @@ void dijkstra_destroy( dijkstra_t** p_dijkstra )
 {
 	if( p_dijkstra && *p_dijkstra )
 	{
+		#ifdef DEBUG_BEST_FIRST_SEARCH
+		bench_mark_destroy( (*p_dijkstra)->bm );
+		#endif
+
 		dijkstra_cleanup( *p_dijkstra );
 		pbheap_destroy( &(*p_dijkstra)->open_list );		
 		hash_map_destroy( &(*p_dijkstra)->open_hash_map );		
@@ -137,8 +142,7 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
  *  Output: True if goal node is found, false if goal node cannot be found 
  *          from the start node; Shortest path between start to goal.
  * ------------------------------------------------------------------------
- * 1.) Initialize the cost for all nodes to be infinity except for the start
- *     node. Set the start node to have 0 cost. Set the open list and closed 
+ * 1.) Set the start node to have 0 cost. Set the open list and closed 
  *     list to be empty.
  * 2.) Add the start node to the open list.
  * 3.) While the open list is not empty, do the following:
@@ -157,6 +161,9 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
  */
 boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* end )
 {
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	bench_mark_start( p_dijkstra->bm );
+	#endif
 	assert( p_dijkstra );
 	boolean found = FALSE;
 	int i;
@@ -171,7 +178,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 	p_node->c      = 0;
 	p_node->state  = start;
 	
-	#ifdef _BFS_DEBUG
+	#ifdef DEBUG_DIJKSTRA
 	p_dijkstra->allocations++;
 	#endif
 
@@ -252,7 +259,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 					pbheap_push( &p_dijkstra->open_list, p_new_node );
 					hash_map_insert( &p_dijkstra->open_hash_map, p_new_node->state, p_new_node );
 		
-					#ifdef _BFS_DEBUG
+					#ifdef DEBUG_DIJKSTRA
 					p_dijkstra->allocations++;
 					#endif
 				}
@@ -263,6 +270,11 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 		tree_map_insert( &p_dijkstra->closed_list, p_current_node->state, p_current_node );
 	}
 
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	bench_mark_end( p_dijkstra->bm );
+	bench_mark_report( p_dijkstra->bm );
+	#endif
+
 	return found;
 }
 
@@ -270,8 +282,8 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 {
 	assert( p_dijkstra );
 	assert( hash_map_size(&p_dijkstra->open_hash_map) == pbheap_size(&p_dijkstra->open_list) );
-	#ifdef _BFS_DEBUG
-	size_t size2 = hash_map_size(&p_dijkstra->open_list);	
+	#ifdef DEBUG_DIJKSTRA
+	size_t size2 = hash_map_size(&p_dijkstra->open_hash_map);	
 	size_t size3 = tree_map_size(&p_dijkstra->closed_list);	
 	assert( size2 + size3 == p_dijkstra->allocations );
 	#endif
@@ -288,7 +300,7 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 	{
 		dijkstra_node_t* p_node = hash_map_iterator_value( &open_itr );
 		free( p_node );	
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_DIJKSTRA
 		p_dijkstra->allocations--;
 		#endif
 	}
@@ -299,7 +311,7 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 	     closed_itr = tree_map_next( closed_itr ) )
 	{
 		free( closed_itr->value );	
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_DIJKSTRA
 		p_dijkstra->allocations--;
 		#endif
 	}
