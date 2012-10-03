@@ -28,6 +28,7 @@
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
 #include <libcollections/vector.h>
+#include <libcollections/bench-mark.h>
 #include "csearch.h"
 
 struct bestfs_node {
@@ -38,7 +39,6 @@ struct bestfs_node {
 
 struct bestfs_algorithm {
 	heuristic_fxn          heuristic;
-	heuristic_comparer_fxn heuristic_compare;
 	successors_fxn         successors_of;
 	bestfs_node_t*            node_path;
 
@@ -46,8 +46,9 @@ struct bestfs_algorithm {
 	hash_map_t             open_hash_map; /* (state, bestfs_node_t*) */
 	tree_map_t             closed_list; /* (state, bestfs_node_t*) */
 
-	#ifdef _BFS_DEBUG
-	size_t allocations;
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	size_t       allocations;
+	bench_mark_t bm;
 	#endif
 };
 
@@ -81,8 +82,9 @@ bestfs_t* bestfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, s
 		p_best->heuristic     = heuristic;
 		p_best->successors_of = successors_of;
 		p_best->node_path     = NULL;
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_BEST_FIRST_SEARCH
 		p_best->allocations   = 0;
+		p_best->bm            = bench_mark_create( "Best First Search Algorithm" );
 		#endif
 
 		pbheap_create( &p_best->open_list, 128, 
@@ -103,12 +105,17 @@ void bestfs_destroy( bestfs_t** p_best )
 {
 	if( p_best && *p_best )
 	{
+		#ifdef DEBUG_BEST_FIRST_SEARCH
+		bench_mark_destroy( (*p_best)->bm );
+		#endif
+
 		bestfs_cleanup( *p_best );
 		pbheap_destroy( &(*p_best)->open_list );		
 		hash_map_destroy( &(*p_best)->open_hash_map );		
 		tree_map_destroy( &(*p_best)->closed_list );		
 		free( *p_best );
 		*p_best = NULL;
+
 	}
 }
 
@@ -131,7 +138,7 @@ void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn successors_of )
 }
 
 /*
- * BFS Algorithm
+ * Best First Search Algorithm
  * ------------------------------------------------------------------------
  *   Input: The start node and goal nodes.
  *  Output: True if goal node is found, false if goal node cannot be found 
@@ -155,6 +162,9 @@ void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn successors_of )
  */
 boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 {
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	bench_mark_start( p_best->bm );
+	#endif
 	boolean found = FALSE;
 	int i;
 	pvector_t successors;	
@@ -168,7 +178,7 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 	p_node->h      = p_best->heuristic( start, end );
 	p_node->state  = start;
 	
-	#ifdef _BFS_DEBUG
+	#ifdef DEBUG_BEST_FIRST_SEARCH
 	p_best->allocations++;
 	#endif
 
@@ -235,7 +245,7 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 					pbheap_push( &p_best->open_list, p_new_node );
 					hash_map_insert( &p_best->open_hash_map, p_new_node->state, p_new_node );
 		
-					#ifdef _BFS_DEBUG
+					#ifdef DEBUG_BEST_FIRST_SEARCH
 					p_best->allocations++;
 					#endif
 				}
@@ -245,6 +255,11 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 		/* e.) Add p_current_node to the closed list. */
 		tree_map_insert( &p_best->closed_list, p_current_node->state, p_current_node );
 	}
+	
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	bench_mark_end( p_best->bm );
+	bench_mark_report( p_best->bm );
+	#endif
 
 	return found;
 }
@@ -252,8 +267,8 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 void bestfs_cleanup( bestfs_t* p_best )
 {
 	assert( hash_map_size(&p_best->open_hash_map) == pbheap_size(&p_best->open_list) );
-	#ifdef _BFS_DEBUG
-	size_t size2 = hash_map_size(&p_best->open_list);	
+	#ifdef DEBUG_BEST_FIRST_SEARCH
+	size_t size2 = hash_map_size(&p_best->open_hash_map);	
 	size_t size3 = tree_map_size(&p_best->closed_list);	
 	assert( size2 + size3 == p_best->allocations );
 	#endif
@@ -270,7 +285,7 @@ void bestfs_cleanup( bestfs_t* p_best )
 	{
 		bestfs_node_t* p_node = hash_map_iterator_value( &open_itr );
 		free( p_node );	
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_BEST_FIRST_SEARCH
 		p_best->allocations--;
 		#endif
 	}
@@ -281,7 +296,7 @@ void bestfs_cleanup( bestfs_t* p_best )
 	     closed_itr = tree_map_next( closed_itr ) )
 	{
 		free( closed_itr->value );	
-		#ifdef _BFS_DEBUG
+		#ifdef DEBUG_BEST_FIRST_SEARCH
 		p_best->allocations--;
 		#endif
 	}
