@@ -19,8 +19,9 @@ AH_BOTTOM([
 ])
 
 
+DFLAGS="-D DEBUG_BREADTH_FIRST_SEARCH -D DEBUG_BEST_FIRST_SEARCH -D DEBUG_DIJKSTRA -D DEBUG_ASTAR"
 
-#CFLAGS="-std=gnu99 -Wall -pedantic -g -ggdb -pg -O0 -I/usr/local/include"
+#CFLAGS="-std=gnu99 -Wall -pedantic -g -ggdb -pg -O0 $DFLAGS -I/usr/local/include"
 CFLAGS="-std=gnu99 -Wall -pedantic -pg -O2 -I/usr/local/include"
 LDFLAGS="-lcollections -L/usr/local/lib"
 
