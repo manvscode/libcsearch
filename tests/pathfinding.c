@@ -50,15 +50,16 @@ static void tile_successors4   ( const void* state, pvector_t* p_successors );
 static void tile_successors8   ( const void* state, pvector_t* p_successors );
 static int tile_manhattan_distance( const void *t1, const void *t2 );
 static int tile_euclidean_distance( const void *t1, const void *t2 );
-static unsigned int tile_cost( const void *t1, const void *t2 );
+static unsigned int tile_positive_cost( const void *t1, const void *t2 );
+static int tile_cost( const void *t1, const void *t2 );
 
 int windowWidth;
 int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_gridWidth			40
-#define DEFAULT_gridHeight			40
+#define DEFAULT_GRIDWIDTH			100
+#define DEFAULT_GRIDHEIGHT			100
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -79,9 +80,6 @@ typedef struct tile {
 	int H;
 } tile_t;
 
-coordinate_t start;
-coordinate_t end;
-
 tile_t *tiles = NULL;
 unsigned int blockList = 0, gridList = 0;
 
@@ -90,12 +88,16 @@ GLfloat dijkstraPathColor[] = { 6.0f, 0.0f, 6.0f, 0.7f };
 GLfloat assPathColor[] = { 6.0f, 6.0f, 0.0f, 0.7f };
 
 
-unsigned int gridWidth = DEFAULT_gridWidth;
-unsigned int gridHeight = DEFAULT_gridHeight;
+unsigned int gridWidth  = DEFAULT_GRIDWIDTH;
+unsigned int gridHeight = DEFAULT_GRIDHEIGHT;
+
+coordinate_t start;
+coordinate_t end;
+
 
 pvector_t bestfs_path;
 pvector_t dijkstra_path;
-pvector_t ass_path;
+pvector_t astar_path;
 
 bestfs_t*   bfs;
 dijkstra_t* dijkstra;
@@ -170,11 +172,11 @@ void initialize( )
 {
 	pvector_create( &bestfs_path, 1, malloc, free );
 	pvector_create( &dijkstra_path, 1, malloc, free );
-	pvector_create( &ass_path, 1, malloc, free );
+	pvector_create( &astar_path, 1, malloc, free );
 
-	bfs      = bestfs_create( pointer_hash, tile_manhattan_distance, tile_successors4 );
-	dijkstra = dijkstra_create( pointer_hash, tile_cost, tile_successors4 );
-	ass      = astar_create( );
+	bfs      = bestfs_create   ( pointer_hash, tile_manhattan_distance, tile_successors4 );
+	dijkstra = dijkstra_create ( pointer_hash, tile_positive_cost, tile_successors4 );
+	ass      = astar_create    ( pointer_hash, tile_manhattan_distance, tile_cost, tile_successors4 );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -233,7 +235,7 @@ void deinitialize( )
 {
 	pvector_destroy( &bestfs_path );
 	pvector_destroy( &dijkstra_path );
-	pvector_destroy( &ass_path );
+	pvector_destroy( &astar_path );
 
 	bestfs_destroy( &bfs );
 	dijkstra_destroy( &dijkstra );
@@ -309,7 +311,7 @@ void render( )
 
 	draw_path( &bestfs_path, bfsPathColor );
 	draw_path( &dijkstra_path, dijkstraPathColor );
-	draw_path( &ass_path, assPathColor );
+	draw_path( &astar_path, assPathColor );
 
 	// draw grid...
 	if( gridWidth * gridWidth <= 1600 )
@@ -371,31 +373,29 @@ void keyboard_keypress( unsigned char key, int x, int y )
 		case 'A':
 		case 'a':
 		{
-			/*
-			pvector_clear( &ass_path );
 			if( start.x == -1 || start.y == -1 ) return;
 			if( end.x == -1 || end.y == -1 ) return;
-			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
-			tile_t *p_end = &tiles[ end.y * gridWidth + end.x ];
 
-			boolean found = ass.find( p_start, p_end );
+			tile_t *p_start = &tiles[ start.y * gridWidth + start.x ];
+			tile_t *p_end   = &tiles[ end.y * gridWidth + end.x ];
+
+			boolean found = astar_find( ass, p_start, p_end );
 
 			if( found )
 			{
-				ASS::Node *pPathNode = ass.getPath( );
+				astar_node_t* p_node;
+				pvector_clear( &astar_path );
 
-				while( pPathNode != NULL )
+				for( p_node = astar_first_node( ass );
+				     p_node != NULL;
+				     p_node = astar_next_node( p_node ) )
 				{
-					ass_path.push_back( pPathNode->state );
-					pvector_push( &ass_path, pPathNode->state );
-					pPathNode = pPathNode->parent;
+					pvector_push( &astar_path, (void*) astar_state(p_node) );
 				}
-
 			}
 			
-			ass.cleanup( );
+			astar_cleanup( ass );
 			glutPostRedisplay( );
-			*/
 			break;
 		}
 		case 'B':
@@ -470,22 +470,26 @@ void keyboard_keypress( unsigned char key, int x, int y )
 		{
 			bestfs_set_successors_fxn( bfs, tile_successors4 );
 			dijkstra_set_successors_fxn( dijkstra, tile_successors4 );
+			astar_set_successors_fxn( ass, tile_successors4 );
 			break;
 		}
 		case '8':
 		{
 			bestfs_set_successors_fxn( bfs, tile_successors8 );
 			dijkstra_set_successors_fxn( dijkstra, tile_successors8 );
+			astar_set_successors_fxn( ass, tile_successors8 );
 			break;
 		}
 		case 'h':
 		{
 			bestfs_set_heuristic_fxn( bfs, tile_manhattan_distance );
+			astar_set_heuristic_fxn( ass, tile_manhattan_distance );
 			break;
 		}
 		case 'H':
 		{
 			bestfs_set_heuristic_fxn( bfs, tile_euclidean_distance );
+			astar_set_heuristic_fxn( ass, tile_euclidean_distance );
 			break;
 		}
 		default:
@@ -579,7 +583,7 @@ void reset( boolean bRandomize )
 {
 	pvector_clear( &bestfs_path );
 	pvector_clear( &dijkstra_path );
-	pvector_clear( &ass_path );
+	pvector_clear( &astar_path );
 
 	for( unsigned int y = 0; y < gridHeight; y++ )
 	{
@@ -602,10 +606,17 @@ void reset( boolean bRandomize )
 		}
 	}
 
+#if 0
 	start.x = -1;
 	start.y = -1;
 	end.x   = -1;
 	end.y   = -1;
+#else
+	start.x = 0;
+	start.y = DEFAULT_GRIDHEIGHT - 1;
+	end.x   = DEFAULT_GRIDWIDTH - 1;
+	end.y   = 0;
+#endif
 }
 
 
@@ -722,12 +733,25 @@ int tile_euclidean_distance( const void *t1, const void *t2 )
 	return euclidean_distance( &p_tile1->position, &p_tile2->position );
 }
 
-unsigned int tile_cost( const void *t1, const void *t2 )
+unsigned int tile_positive_cost( const void *t1, const void *t2 )
 {
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
-#if 1
+#if 0
+	//return tile_euclidean_distance( p_tile1, p_tile2 );
+	return abs(p_tile1->position.x - p_tile2->position.x) + abs(p_tile1->position.y - p_tile2->position.y);
+#else
+	return 1;
+#endif
+}
+
+int tile_cost( const void *t1, const void *t2 )
+{
+	const tile_t* p_tile1 = t1;
+	const tile_t* p_tile2 = t2;
+
+#if 0
 	//return tile_euclidean_distance( p_tile1, p_tile2 );
 	return abs(p_tile1->position.x - p_tile2->position.x) + abs(p_tile1->position.y - p_tile2->position.y);
 #else

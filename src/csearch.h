@@ -192,8 +192,19 @@ dijkstra_node_t* dijkstra_next_node          ( const dijkstra_node_t* p_node );
 struct astar_algorithm;
 typedef struct astar_algorithm astar_t;
 
-astar_t*    astar_create  ( void );
-void        astar_destroy ( astar_t** p_astar );
+struct astar_node;
+typedef struct astar_node astar_node_t;
+
+astar_t*      astar_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, cost_fxn cost, successors_fxn successors_of );
+void          astar_destroy            ( astar_t** p_astar );
+void          astar_set_heuristic_fxn  ( astar_t* p_astar, heuristic_fxn heuristic );
+void          astar_set_cost_fxn       ( astar_t* p_astar, cost_fxn cost );
+void          astar_set_successors_fxn ( astar_t* p_astar, successors_fxn successors_of );
+boolean       astar_find               ( astar_t* p_astar, const void* start, const void* end );
+void          astar_cleanup            ( astar_t* p_astar );
+astar_node_t* astar_first_node         ( const astar_t* p_astar );
+const void*   astar_state              ( const astar_node_t* p_node );
+astar_node_t* astar_next_node          ( const astar_node_t* p_node );
 
 
 #ifdef __cplusplus
