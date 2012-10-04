@@ -232,7 +232,9 @@ boolean astar_find( astar_t* p_astar, const void* start, const void* end )
 				void* found_node;
 				if( tree_map_find( &p_astar->closed_list, successor_state, &found_node ) )
 				{
-					#if 0
+					#if 1
+					continue;
+					#else
 					astar_node_t* p_found_node = (astar_node_t*) found_node;
 					 /* If its F-value is better, then update its F-value with the 
  					  * better value and move it from the closed list to the open 
@@ -254,8 +256,6 @@ boolean astar_find( astar_t* p_astar, const void* start, const void* end )
 						pbheap_push( &p_astar->open_list, p_found_node );
 						hash_map_insert( &p_astar->open_hash_map, p_found_node->state, p_found_node );
 					}
-					#else
-					continue;
 					#endif
 				}
 

@@ -58,8 +58,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_GRIDWIDTH			100
-#define DEFAULT_GRIDHEIGHT			100
+#define DEFAULT_GRIDWIDTH			250
+#define DEFAULT_GRIDHEIGHT			250
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -151,7 +151,7 @@ int main( int argc, char *argv[] )
 	glutDisplayFunc( render );
 	glutReshapeFunc( resize );
 	glutKeyboardFunc( keyboard_keypress );
-	glutIdleFunc( idle );
+	//glutIdleFunc( idle );
 	glutMouseFunc( mouse );
 	glutMotionFunc( mouse_motion );
 
@@ -174,9 +174,9 @@ void initialize( )
 	pvector_create( &dijkstra_path, 1, malloc, free );
 	pvector_create( &astar_path, 1, malloc, free );
 
-	bfs      = bestfs_create   ( pointer_hash, tile_manhattan_distance, tile_successors4 );
+	bfs      = bestfs_create   ( pointer_hash, tile_euclidean_distance, tile_successors4 );
 	dijkstra = dijkstra_create ( pointer_hash, tile_positive_cost, tile_successors4 );
-	ass      = astar_create    ( pointer_hash, tile_manhattan_distance, tile_cost, tile_successors4 );
+	ass      = astar_create    ( pointer_hash, tile_euclidean_distance, tile_cost, tile_successors4 );
 
 	glDisable( GL_DEPTH_TEST );
 	
@@ -189,7 +189,7 @@ void initialize( )
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	
 
-	glShadeModel( GL_SMOOTH );
+	glShadeModel( GL_FLAT );
 	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 
 
@@ -198,7 +198,7 @@ void initialize( )
 
 
 	// TO DO: Initialization code goes here...
-	glEnable( GL_MAP2_VERTEX_3 );
+	//glEnable( GL_MAP2_VERTEX_3 );
 	glEnable( GL_LINE_STIPPLE );
 
 
@@ -249,11 +249,17 @@ void deinitialize( )
 void draw_tiles( )
 {
 	// draw tiles
+	int windex = 0;
+	int index = 0;
 	for( unsigned int y = 0; y < gridHeight; y++ )
 	{
 		for( unsigned int x = 0; x < gridWidth; x++ )
 		{
-			int index = y * gridWidth + x ;
+			#if 1
+			index = windex + x;
+			#else
+			//int index = y * gridWidth + x ;
+			#endif
 
 			glPushMatrix( );
 				glPushAttrib( GL_CURRENT_BIT );
@@ -274,7 +280,10 @@ void draw_tiles( )
 
 				glPopAttrib( );
 			glPopMatrix( );
+		
 		}
+		
+		windex += gridWidth;
 	}
 }
 
@@ -626,7 +635,7 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 {
 	const tile_t* p_tile = state;
 
-	#if 0 //optimized version
+	#if 1 //optimized version
 	int s4[]   = { -1, 1 };
 	size_t len = sizeof(s4) / sizeof(s4[0]);
 
@@ -638,10 +647,10 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 			int successorY = p_tile->position.y + s4[ j ];
 			int successorX = p_tile->position.x + s4[ i ];
 
-			if( successorY < 0 ) continue;
-			if( successorX < 0 ) continue;
-			if( successorY >= gridHeight ) continue;
-			if( successorX >= gridWidth ) continue;
+			if( successorY < 0 ||
+			    successorX < 0 ||
+			    successorY >= gridHeight ||
+			    successorX >= gridWidth ) continue;
 
 			int index = successorY * gridWidth + successorX;
 
@@ -659,10 +668,10 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 			int successorY = p_tile->position.y + j;
 			int successorX = p_tile->position.x + i;
 
-			if( successorY < 0 ) continue;
-			if( successorX < 0 ) continue;
-			if( successorY >= gridHeight ) continue;
-			if( successorX >= gridWidth ) continue;
+			if( successorY < 0 ||
+			    successorX < 0 ||
+			    successorY >= gridHeight ||
+			    successorX >= gridWidth ) continue;
 
 			int index = successorY * gridWidth + successorX;
 
@@ -678,6 +687,7 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 {
 	const tile_t* p_tile = state;
 
+
 	#if 0 //optimized version
 	#else // original code
 	for( int i = -1; i <= 1; i += 2 )
@@ -685,14 +695,12 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 		int successorY = p_tile->position.y;
 		int successorX = p_tile->position.x + i;
 
-		if( successorY < 0 ) continue;
-		if( successorX < 0 ) continue;
-		if( successorY >= gridHeight ) continue;
-		if( successorX >= gridWidth ) continue;
+		if( successorX < 0 ||
+		    successorX >= gridWidth ) continue;
 
 		int index = successorY * gridWidth + successorX;
 
-		if( tiles[ index ].is_walkable == FALSE ) continue;
+		if( !tiles[ index ].is_walkable ) continue;
 
 		pvector_push( p_successors, &tiles[ index ] );
 	}
@@ -702,10 +710,8 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 		int successorY = p_tile->position.y + i;
 		int successorX = p_tile->position.x;
 
-		if( successorY < 0 ) continue;
-		if( successorX < 0 ) continue;
-		if( successorY >= gridHeight ) continue;
-		if( successorX >= gridWidth ) continue;
+		if( successorY < 0 ||
+		    successorY >= gridHeight ) continue;
 
 		int index = successorY * gridWidth + successorX;
 
@@ -730,8 +736,12 @@ int tile_euclidean_distance( const void *t1, const void *t2 )
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
-	return euclidean_distance( &p_tile1->position, &p_tile2->position );
+	//return euclidean_distance( &p_tile1->position, &p_tile2->position );
+	return (int) sqrtf( (float) ((p_tile1->position.x - p_tile2->position.x) * (p_tile1->position.x - p_tile2->position.x) +
+					 (p_tile1->position.y - p_tile2->position.y) * (p_tile1->position.y - p_tile2->position.y)) );
 }
+
+
 
 unsigned int tile_positive_cost( const void *t1, const void *t2 )
 {
@@ -751,7 +761,7 @@ int tile_cost( const void *t1, const void *t2 )
 	const tile_t* p_tile1 = t1;
 	const tile_t* p_tile2 = t2;
 
-#if 0
+#if 1
 	//return tile_euclidean_distance( p_tile1, p_tile2 );
 	return abs(p_tile1->position.x - p_tile2->position.x) + abs(p_tile1->position.y - p_tile2->position.y);
 #else
