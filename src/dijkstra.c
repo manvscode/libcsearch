@@ -28,8 +28,8 @@
 #include <libcollections/bheap.h>
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
-#include <libcollections/vector.h>
 #include <libcollections/bench-mark.h>
+#include "successors-private.h"
 #include "csearch.h"
 
 
@@ -54,20 +54,20 @@ struct dijkstra_algorithm {
 	#endif
 };
 
-static boolean nop_keyval_fxn( void *key, void *value )
+static boolean nop_keyval_fxn( void* restrict key, void* restrict value )
 {
 	return TRUE;
 }
 
-static int pointer_compare( const void* p_n1, const void* p_n2 )
+static int dijkstra_pointer_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
-	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
+	ptrdiff_t diff = (size_t*) p_n1 - (size_t*) p_n2;
 	return (int) diff;
 }
 
 #define default_cost_compare( c1, c2 )      ((c2) - (c1))
 
-static int best_cost_compare( const void* p_n1, const void* p_n2 )
+static int best_cost_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
 	return default_cost_compare(((dijkstra_node_t*)p_n1)->c,  ((dijkstra_node_t*)p_n2)->c);
 }
@@ -91,10 +91,10 @@ dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn c
 					  malloc, free );
 
 		hash_map_create( &p_dijkstra->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
-						 state_hasher, nop_keyval_fxn, pointer_compare, 
+						 state_hasher, nop_keyval_fxn, dijkstra_pointer_compare, 
 						 malloc, free );
 
-		tree_map_create( &p_dijkstra->closed_list, nop_keyval_fxn, pointer_compare, malloc, free );
+		tree_map_create( &p_dijkstra->closed_list, nop_keyval_fxn, dijkstra_pointer_compare, malloc, free );
 	}
 
 	return p_dijkstra;
@@ -159,7 +159,7 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
       e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* end )
+boolean dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_dijkstra->bm );
@@ -167,8 +167,8 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 	assert( p_dijkstra );
 	boolean found = FALSE;
 	int i;
-	pvector_t successors;	
-	pvector_create( &successors, 8, malloc, free );
+	successors_t successors;	
+	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	dijkstra_cleanup( p_dijkstra );
@@ -209,9 +209,9 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 			p_dijkstra->successors_of( p_current_node->state, &successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < pvector_size(&successors); i++ )
+			for( i = 0; i < successors_size(&successors); i++ )
 			{
-				const void* successor_state = pvector_get( &successors, i );
+				const void* successor_state = successors_get( &successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
@@ -265,7 +265,7 @@ boolean dijkstra_find( dijkstra_t* p_dijkstra, const void* start, const void* en
 				}
 			} /* for */
 			
-			pvector_clear( &successors );
+			successors_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */

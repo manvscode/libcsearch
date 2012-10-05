@@ -6,7 +6,7 @@
 
 unsigned int manhattan_distance( const coordinate_t *c1, const coordinate_t *c2 )
 {
-	#if 1
+	#if 0
 	return fast_abs( c1->x - c2->x ) + fast_abs( c1->y - c2->y );
 	#else
 	return abs( c1->x - c2->x ) + abs( c1->y - c2->y );

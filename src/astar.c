@@ -27,8 +27,8 @@
 #include <libcollections/bheap.h>
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
-#include <libcollections/vector.h>
 #include <libcollections/bench-mark.h>
+#include "successors-private.h"
 #include "csearch.h"
 
 struct astar_node {
@@ -56,20 +56,20 @@ struct astar_algorithm {
 };
 
 
-static boolean nop_keyval_fxn( void *key, void *value )
+static boolean nop_keyval_fxn( void* restrict key, void* restrict value )
 {
 	return TRUE;
 }
 
-static int pointer_compare( const void* p_n1, const void* p_n2 )
+static int astar_pointer_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
-	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
+	ptrdiff_t diff = (size_t*) p_n1 - (size_t*) p_n2;
 	return (int) diff;
 }
 
 #define default_f_compare( f1, f2 )      ((f2) - (f1))
 
-static int best_f_compare( const void* p_n1, const void* p_n2 )
+static int best_f_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
 	return default_f_compare( ((astar_node_t*)p_n1)->f, ((astar_node_t*)p_n2)->f );
 }
@@ -95,10 +95,10 @@ astar_t* astar_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, cos
 					  malloc, free );
 
 		hash_map_create( &p_astar->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
-						 state_hasher, nop_keyval_fxn, pointer_compare, 
+						 state_hasher, nop_keyval_fxn, astar_pointer_compare, 
 						 malloc, free );
 
-		tree_map_create( &p_astar->closed_list, nop_keyval_fxn, pointer_compare, malloc, free );
+		tree_map_create( &p_astar->closed_list, nop_keyval_fxn, astar_pointer_compare, malloc, free );
 	}
 
 	return p_astar;
@@ -176,15 +176,15 @@ void astar_set_successors_fxn( astar_t* p_astar, successors_fxn successors_of )
  *    e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean astar_find( astar_t* p_astar, const void* start, const void* end )
+boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_ASTAR
 	bench_mark_start( p_astar->bm );
 	#endif
 	boolean found = FALSE;
 	int i;
-	pvector_t successors;	
-	pvector_create( &successors, 8, malloc, free );
+	successors_t successors;	
+	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	astar_cleanup( p_astar );
@@ -224,9 +224,9 @@ boolean astar_find( astar_t* p_astar, const void* start, const void* end )
 			p_astar->successors_of( p_current_node->state, &successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < pvector_size(&successors); i++ )
+			for( i = 0; i < successors_size(&successors); i++ )
 			{
-				const void* successor_state = pvector_get( &successors, i );
+				const void* successor_state = successors_get( &successors, i );
 
 				/* i.) If S is in the closed list: */
 				void* found_node;
@@ -302,7 +302,7 @@ boolean astar_find( astar_t* p_astar, const void* start, const void* end )
 				}
 			} /* for */
 			
-			pvector_clear( &successors );
+			successors_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */

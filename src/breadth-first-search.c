@@ -23,12 +23,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <libcollections/alloc.h>
-#include <libcollections/dlist.h>
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
-#include <libcollections/vector.h>
 #include <libcollections/bench-mark.h>
+#include "successors-private.h"
+#include "list.h"
 #include "csearch.h"
 
 struct breadthfs_node {
@@ -41,7 +40,7 @@ struct breadthfs_algorithm {
 	successors_fxn    successors_of;
 	breadthfs_node_t* node_path;
 
-	dlist_t    open_list; /* list of breadthfs_node_t* */
+	list_t     open_list; /* list of breadthfs_node_t* */
 	hash_map_t open_hash_map; /* (state, breadthfs_node_t*) */
 	tree_map_t closed_list; /* (state, breadthfs_node_t*) */
 
@@ -51,17 +50,13 @@ struct breadthfs_algorithm {
 	#endif
 };
 
-static boolean nop_fxn( void *data )
+
+static boolean nop_keyval_fxn( void* restrict key, void* restrict value )
 {
 	return TRUE;
 }
 
-static boolean nop_keyval_fxn( void *key, void *value )
-{
-	return TRUE;
-}
-
-static int pointer_compare( const void* p_n1, const void* p_n2 )
+static int pointer_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
 	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
 	return (int) diff;
@@ -81,7 +76,7 @@ breadthfs_t* breadthfs_create( state_hash_fxn state_hasher/*, compare_fxn compar
 		p_bfs->bm            = bench_mark_create( "Breadth First Search Algorithm" );
 		#endif
 
-		dlist_create( &p_bfs->open_list, nop_fxn, malloc, free );
+		list_create( &p_bfs->open_list, malloc, free );
 		hash_map_create( &p_bfs->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
 						 state_hasher, nop_keyval_fxn, pointer_compare, 
 						 malloc, free );
@@ -100,7 +95,7 @@ void breadthfs_destroy( breadthfs_t** p_bfs )
 		#endif
 
 		breadthfs_cleanup( *p_bfs );
-		dlist_destroy( &(*p_bfs)->open_list );		
+		list_destroy( &(*p_bfs)->open_list );		
 		tree_map_destroy( &(*p_bfs)->closed_list );		
 		free( *p_bfs );
 		*p_bfs = NULL;
@@ -145,15 +140,15 @@ void breadthfs_set_successors_fxn( breadthfs_t* p_bfs, successors_fxn successors
  *        e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean breadthfs_find( breadthfs_t* p_bfs, const void* start, const void* end )
+boolean breadthfs_find( breadthfs_t* restrict p_bfs, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_bfs->bm );
 	#endif
 	int i;
 	boolean found = FALSE;
-	pvector_t successors;	
-	pvector_create( &successors, 8, malloc, free );
+	successors_t successors;	
+	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	breadthfs_cleanup( p_bfs );
@@ -167,15 +162,15 @@ boolean breadthfs_find( breadthfs_t* p_bfs, const void* start, const void* end )
 	#endif
 
  	/* 2.) Add the start node to the open list. */
-	dlist_push( &p_bfs->open_list, p_node );
+	list_push( &p_bfs->open_list, p_node );
 	hash_map_insert( &p_bfs->open_hash_map, p_node->state, p_node );
 
  	/* 3.) While the open list is not empty, do the following: */
-	while( !found && dlist_size(&p_bfs->open_list) > 0 )
+	while( !found && list_size(&p_bfs->open_list) > 0 )
 	{
  		/* a.) Get a node from the open list, call it p_current_node. */
-		breadthfs_node_t* p_current_node = dlist_front( &p_bfs->open_list )->data;
-		dlist_remove_front( &p_bfs->open_list );
+		breadthfs_node_t* p_current_node = list_front( &p_bfs->open_list )->data;
+		list_remove_front( &p_bfs->open_list );
 		hash_map_remove( &p_bfs->open_hash_map, p_current_node->state );
 					
 		/* b.) If p_current_node is the goal node, return true. */
@@ -190,9 +185,9 @@ boolean breadthfs_find( breadthfs_t* p_bfs, const void* start, const void* end )
 			p_bfs->successors_of( p_current_node->state, &successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < pvector_size(&successors); i++ )
+			for( i = 0; i < successors_size(&successors); i++ )
 			{
-				const void* successor_state = pvector_get( &successors, i );
+				const void* successor_state = successors_get( &successors, i );
 
 				/* i.) If S is not in the closed list, continue. */
 				void* found_node;
@@ -212,14 +207,16 @@ boolean breadthfs_find( breadthfs_t* p_bfs, const void* start, const void* end )
 					p_new_node->parent     = p_current_node;
 					p_new_node->state      = successor_state;
 
-					dlist_push( &p_bfs->open_list, p_new_node );
+					list_push( &p_bfs->open_list, p_new_node );
 					hash_map_insert( &p_bfs->open_hash_map, p_new_node->state, p_new_node );
 		
 					#ifdef DEBUG_BREADTH_FIRST_SEARCH
 					p_bfs->allocations++;
 					#endif
 				}
-			}
+			} /* for */
+
+			successors_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
@@ -236,7 +233,7 @@ boolean breadthfs_find( breadthfs_t* p_bfs, const void* start, const void* end )
 
 void breadthfs_cleanup( breadthfs_t* p_bfs )
 {
-	assert( hash_map_size(&p_bfs->open_hash_map) == dlist_size(&p_bfs->open_list) );
+	assert( hash_map_size(&p_bfs->open_hash_map) == list_size(&p_bfs->open_list) );
 	#ifdef DEBUG_BREADTH_FIRST_SEARCH
 	size_t size2 = hash_map_size(&p_bfs->open_hash_map);	
 	size_t size3 = tree_map_size(&p_bfs->closed_list);	
@@ -272,7 +269,7 @@ void breadthfs_cleanup( breadthfs_t* p_bfs )
 	}
 
 	// empty out the data structures
-	dlist_clear( &p_bfs->open_list );
+	list_clear( &p_bfs->open_list );
 	hash_map_clear( &p_bfs->open_hash_map );
 	tree_map_clear( &p_bfs->closed_list );
 }

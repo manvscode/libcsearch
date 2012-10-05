@@ -27,8 +27,8 @@
 #include <libcollections/bheap.h>
 #include <libcollections/hash-map.h>
 #include <libcollections/tree-map.h>
-#include <libcollections/vector.h>
 #include <libcollections/bench-mark.h>
+#include "successors-private.h"
 #include "csearch.h"
 
 struct bestfs_node {
@@ -38,9 +38,9 @@ struct bestfs_node {
 };
 
 struct bestfs_algorithm {
-	heuristic_fxn          heuristic;
-	successors_fxn         successors_of;
-	bestfs_node_t*            node_path;
+	heuristic_fxn  heuristic;
+	successors_fxn successors_of;
+	bestfs_node_t* node_path;
 
 	pbheap_t               open_list; /* list of bestfs_node_t* */
 	hash_map_t             open_hash_map; /* (state, bestfs_node_t*) */
@@ -52,21 +52,21 @@ struct bestfs_algorithm {
 	#endif
 };
 
-static boolean nop_keyval_fxn( void *key, void *value )
+static boolean nop_keyval_fxn( void* restrict key, void* restrict value )
 {
 	return TRUE;
 }
 
-static int pointer_compare( const void* p_n1, const void* p_n2 )
+static int bestfs_pointer_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
-	ptrdiff_t diff = (unsigned char*) p_n1 - (unsigned char*) p_n2;
+	ptrdiff_t diff = (size_t*) p_n1 - (size_t*) p_n2;
 	return (int) diff;
 }
 
 #define default_heuristic_compare( h1, h2 )  ((h2) - (h1))
 
 
-static int bestfs_heuristic_compare( const void* p_n1, const void* p_n2 )
+static int bestfs_heuristic_compare( const void* restrict p_n1, const void* restrict p_n2 )
 {
 	return default_heuristic_compare( ((bestfs_node_t*)p_n1)->h, ((bestfs_node_t*)p_n2)->h );
 }
@@ -88,14 +88,14 @@ bestfs_t* bestfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, s
 		#endif
 
 		pbheap_create( &p_best->open_list, 128, 
-					  (heap_compare_function) bestfs_heuristic_compare, 
-					  malloc, free );
+					   bestfs_heuristic_compare, 
+					   malloc, free );
 
 		hash_map_create( &p_best->open_hash_map, HASH_MAP_SIZE_MEDIUM, 
-						 state_hasher, nop_keyval_fxn, pointer_compare, 
+						 state_hasher, nop_keyval_fxn, bestfs_pointer_compare, 
 						 malloc, free );
 
-		tree_map_create( &p_best->closed_list, nop_keyval_fxn, pointer_compare, malloc, free );
+		tree_map_create( &p_best->closed_list, nop_keyval_fxn, bestfs_pointer_compare, malloc, free );
 	}
 
 	return p_best;
@@ -160,15 +160,15 @@ void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn successors_of )
  *        e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
+boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_best->bm );
 	#endif
 	boolean found = FALSE;
 	int i;
-	pvector_t successors;	
-	pvector_create( &successors, 8, malloc, free );
+	successors_t successors;	
+	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	bestfs_cleanup( p_best );
@@ -206,9 +206,9 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 			p_best->successors_of( p_current_node->state, &successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < pvector_size(&successors); i++ )
+			for( i = 0; i < successors_size(&successors); i++ )
 			{
-				const void* successor_state = pvector_get( &successors, i );
+				const void* successor_state = successors_get( &successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
@@ -251,7 +251,7 @@ boolean bestfs_find( bestfs_t* p_best, const void* start, const void* end )
 				}
 			} /* for */
 			
-			pvector_clear( &successors );
+			successors_clear( &successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */

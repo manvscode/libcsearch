@@ -21,8 +21,8 @@
  */
 #include <GL/freeglut.h>
 #include <libcollections/types.h>
-#include <libcollections/vector.h>
 #include <libcollections/hash-functions.h>
+#include <libcollections/vector.h>
 #include <csearch.h>
 #include <heuristics.h>
 #include <stdio.h>
@@ -30,28 +30,28 @@
 #include <math.h>
 #include <assert.h>
 
+extern void* pvector_get( pvector_t* p_vector, size_t index );
+
 #define ESC_KEY			27
 
-extern void* pvector_get( pvector_t *p_vector, size_t index );
-
-void initialize         ( );
-void deinitialize       ( );
-void draw_tiles         ( );
-void draw_path          ( const pvector_t* path, GLfloat color[] );
-void render             ( );
+void initialize         ( void );
+void deinitialize       ( void );
+void draw_tiles         ( void );
+void draw_path          ( const pvector_t* restrict path, GLfloat color[] );
+void render             ( void );
 void resize             ( int width, int height );
 void keyboard_keypress  ( unsigned char key, int x, int y );
 void mouse              ( int button, int state, int x, int y );
 void mouse_motion       ( int x, int y );
-void idle               ( );
+void idle               ( void );
 void write_text         ( void *font, const char* text, int x, int y, float r, float g, float b );
 void reset              ( boolean bRandomize );
-static void tile_successors4   ( const void* state, pvector_t* p_successors );
-static void tile_successors8   ( const void* state, pvector_t* p_successors );
-static int tile_manhattan_distance( const void *t1, const void *t2 );
-static int tile_euclidean_distance( const void *t1, const void *t2 );
-static unsigned int tile_positive_cost( const void *t1, const void *t2 );
-static int tile_cost( const void *t1, const void *t2 );
+static void tile_successors4   ( const void* restrict state, successors_t* restrict p_successors );
+static void tile_successors8   ( const void* restrict state, successors_t* restrict p_successors );
+static int tile_manhattan_distance( const void* restrict t1, const void* restrict t2 );
+static int tile_euclidean_distance( const void* restrict t1, const void* restrict t2 );
+static unsigned int tile_positive_cost( const void* restrict t1, const void* restrict t2 );
+static int tile_cost( const void* restrict t1, const void* restrict t2 );
 
 int windowWidth;
 int windowHeight;
@@ -82,10 +82,6 @@ typedef struct tile {
 
 tile_t *tiles = NULL;
 unsigned int blockList = 0, gridList = 0;
-
-GLfloat bfsPathColor[] = { 0.0f, 6.0f, 6.0f, 0.7f };
-GLfloat dijkstraPathColor[] = { 6.0f, 0.0f, 6.0f, 0.7f };
-GLfloat assPathColor[] = { 6.0f, 6.0f, 0.0f, 0.7f };
 
 
 unsigned int gridWidth  = DEFAULT_GRIDWIDTH;
@@ -168,7 +164,7 @@ int main( int argc, char *argv[] )
 	return 0;
 }
 
-void initialize( )
+void initialize( void )
 {
 	pvector_create( &bestfs_path, 1, malloc, free );
 	pvector_create( &dijkstra_path, 1, malloc, free );
@@ -231,7 +227,7 @@ void initialize( )
 	reset( FALSE );
 }
 
-void deinitialize( )
+void deinitialize( void )
 {
 	pvector_destroy( &bestfs_path );
 	pvector_destroy( &dijkstra_path );
@@ -246,7 +242,7 @@ void deinitialize( )
 }
 
 
-void draw_tiles( )
+void draw_tiles( void )
 {
 	// draw tiles
 	int windex = 0;
@@ -288,7 +284,7 @@ void draw_tiles( )
 }
 
 
-void draw_path( const pvector_t *path, GLfloat color[] )
+void draw_path( const pvector_t* restrict path, GLfloat color[] )
 {
 	size_t i;
 	if( pvector_size(path) <= 0 ) return;
@@ -310,10 +306,15 @@ void draw_path( const pvector_t *path, GLfloat color[] )
 	
 }
 
-void render( )
+void render( void )
 {
+	GLfloat bfsPathColor[]      = { 0.0f, 6.0f, 6.0f, 0.7f };
+	GLfloat dijkstraPathColor[] = { 6.0f, 0.0f, 6.0f, 0.7f };
+	GLfloat assPathColor[]      = { 6.0f, 6.0f, 0.0f, 0.7f };
+
 	glClear( GL_COLOR_BUFFER_BIT  );
 	glLoadIdentity( );	
+
 
 
 	draw_tiles( );
@@ -550,7 +551,7 @@ void mouse_motion( int x, int y )
 	}
 }
 
-void idle( )
+void idle( void )
 { /*glutPostRedisplay( );*/ }
 
 void write_text( void *font, const char* text, int x, int y, float r, float g, float b )
@@ -631,7 +632,7 @@ void reset( boolean bRandomize )
 
 
 
-void tile_successors8( const void* state, pvector_t* p_successors )
+void tile_successors8( const void* restrict state, successors_t* restrict p_successors )
 {
 	const tile_t* p_tile = state;
 
@@ -647,16 +648,17 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 			int successorY = p_tile->position.y + s4[ j ];
 			int successorX = p_tile->position.x + s4[ i ];
 
-			if( successorY < 0 ||
-			    successorX < 0 ||
-			    successorY >= gridHeight ||
-			    successorX >= gridWidth ) continue;
+			if( successorY >= 0 &&
+			    successorX >= 0 &&
+			    successorY < gridHeight &&
+			    successorX < gridWidth ) 
+			{
+				int index = successorY * gridWidth + successorX;
 
-			int index = successorY * gridWidth + successorX;
+				if( tiles[ index ].is_walkable == FALSE ) continue;
 
-			if( tiles[ index ].is_walkable == FALSE ) continue;
-
-			pvector_push( p_successors, &tiles[ index ] );
+				successors_push( p_successors, &tiles[ index ] );
+			}
 		}
 	}
 	#else // original code
@@ -668,22 +670,23 @@ void tile_successors8( const void* state, pvector_t* p_successors )
 			int successorY = p_tile->position.y + j;
 			int successorX = p_tile->position.x + i;
 
-			if( successorY < 0 ||
-			    successorX < 0 ||
-			    successorY >= gridHeight ||
-			    successorX >= gridWidth ) continue;
+			if( successorY >= 0 &&
+			    successorX >= 0 &&
+			    successorY < gridHeight &&
+			    successorX < gridWidth ) 
+			{
+				int index = successorY * gridWidth + successorX;
 
-			int index = successorY * gridWidth + successorX;
+				if( tiles[ index ].is_walkable == FALSE ) continue;
 
-			if( tiles[ index ].is_walkable == FALSE ) continue;
-
-			pvector_push( p_successors, &tiles[ index ] );
+				successors_push( p_successors, &tiles[ index ] );
+			}
 		}
 	}
 	#endif
 }
 
-void tile_successors4( const void* state, pvector_t* p_successors )
+void tile_successors4( const void* restrict state, successors_t* restrict p_successors )
 {
 	const tile_t* p_tile = state;
 
@@ -695,14 +698,14 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 		int successorY = p_tile->position.y;
 		int successorX = p_tile->position.x + i;
 
-		if( successorX < 0 ||
-		    successorX >= gridWidth ) continue;
+		if( successorX >= 0 && successorX < gridWidth )
+		{
+			int index = successorY * gridWidth + successorX;
 
-		int index = successorY * gridWidth + successorX;
+			if( !tiles[ index ].is_walkable ) continue;
 
-		if( !tiles[ index ].is_walkable ) continue;
-
-		pvector_push( p_successors, &tiles[ index ] );
+			successors_push( p_successors, &tiles[ index ] );
+		}
 	}
 
 	for( int i = -1; i <= 1; i += 2 )
@@ -710,14 +713,14 @@ void tile_successors4( const void* state, pvector_t* p_successors )
 		int successorY = p_tile->position.y + i;
 		int successorX = p_tile->position.x;
 
-		if( successorY < 0 ||
-		    successorY >= gridHeight ) continue;
+		if( successorY >= 0 && successorY < gridHeight )
+		{
+			int index = successorY * gridWidth + successorX;
 
-		int index = successorY * gridWidth + successorX;
+			if( tiles[ index ].is_walkable == FALSE ) continue;
 
-		if( tiles[ index ].is_walkable == FALSE ) continue;
-
-		pvector_push( p_successors, &tiles[ index ] );
+			successors_push( p_successors, &tiles[ index ] );
+		}
 	}
 	#endif
 }
