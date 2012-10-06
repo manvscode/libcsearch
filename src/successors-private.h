@@ -55,12 +55,16 @@ void    successors_destroy ( successors_t *p_successors );
 #define successors_peek( p_successors )        (successors_get(p_successors, successors_size(p_successors) - 1))
 #define successors_clear( p_successors )       ((p_successors)->size = 0)
 
-#define successors_get( p_successors, index ) \
-	(p_successors)->array[ index ]
 
-#define successors_set( p_successors, index, p_data ) \
-	(p_successors)->array[ index ] = (p_data)
+static inline void* successors_get( successors_t* restrict p_successors, size_t index )
+{
+	return p_successors->array[ index ];
+}
 
+static inline void successors_set( successors_t* restrict p_successors, size_t index, void* restrict p_data )
+{
+	p_successors->array[ index ] = p_data;
+}
 
 #ifdef __cplusplus
 }
