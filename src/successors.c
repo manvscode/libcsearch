@@ -30,7 +30,7 @@
  * successors - A growable array of states.
  * successors does not own the states.
  */
-boolean successors_create( successors_t* p_successors, size_t size, alloc_function alloc, free_function free )
+bool successors_create( successors_t* p_successors, size_t size, alloc_function alloc, free_function free )
 {
 	assert( p_successors );
 
@@ -63,7 +63,7 @@ void successors_destroy( successors_t* p_successors )
 	#endif
 }
 
-boolean successors_push( successors_t* restrict p_successors, const void* restrict state )
+bool successors_push( successors_t* restrict p_successors, const void* restrict state )
 {
 	assert( p_successors );
 
@@ -81,24 +81,24 @@ boolean successors_push( successors_t* restrict p_successors, const void* restri
 	return p_successors->array != NULL;
 }
 
-boolean successors_pop( successors_t* p_successors )
+bool successors_pop( successors_t* p_successors )
 {
-	boolean result = FALSE;
+	bool result = false;
 	assert( p_successors );
 	assert( successors_size(p_successors) > 0 );
 
 	if( p_successors->size > 0 )
 	{
 		p_successors->size--;
-		result = TRUE;
+		result = true;
 	}
 
 	return result;
 }
 
-boolean successors_resize( successors_t* p_successors, size_t new_size )
+bool successors_resize( successors_t* p_successors, size_t new_size )
 {
-	boolean result = TRUE;
+	bool result = true;
 
 	if( successors_size(p_successors) > new_size )
 	{

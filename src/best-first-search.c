@@ -174,12 +174,12 @@ void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn successors_of )
  *        e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const void* restrict end )
+bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_best->bm );
 	#endif
-	boolean found = FALSE;
+	bool found = false;
 	int i;
 	successors_t successors;	
 	successors_create( &successors, 8, malloc, free );
@@ -212,7 +212,7 @@ boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, cons
 		if( p_current_node->state == end )
 		{
 			p_best->node_path = p_current_node;
-			found = TRUE;
+			found = true;
 		}
 		else
 		{

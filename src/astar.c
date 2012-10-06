@@ -190,12 +190,12 @@ void astar_set_successors_fxn( astar_t* p_astar, successors_fxn successors_of )
  *    e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const void* restrict end )
+bool astar_find( astar_t* restrict p_astar, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_ASTAR
 	bench_mark_start( p_astar->bm );
 	#endif
-	boolean found = FALSE;
+	bool found = false;
 	int i;
 	successors_t successors;	
 	successors_create( &successors, 8, malloc, free );
@@ -230,7 +230,7 @@ boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const
 		if( p_current_node->state == end )
 		{
 			p_astar->node_path = p_current_node;
-			found = TRUE;
+			found = true;
 		}
 		else
 		{

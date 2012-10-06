@@ -45,7 +45,7 @@ struct successors {
 	void** array;
 };
 
-boolean successors_create  ( successors_t *p_successors, size_t size, alloc_function alloc, free_function free );
+bool successors_create  ( successors_t *p_successors, size_t size, alloc_function alloc, free_function free );
 void    successors_destroy ( successors_t *p_successors );
 
 #define successors_array( p_successors )       ((p_successors)->array)

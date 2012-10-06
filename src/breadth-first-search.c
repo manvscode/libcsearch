@@ -140,13 +140,13 @@ void breadthfs_set_successors_fxn( breadthfs_t* p_bfs, successors_fxn successors
  *        e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean breadthfs_find( breadthfs_t* restrict p_bfs, const void* restrict start, const void* restrict end )
+bool breadthfs_find( breadthfs_t* restrict p_bfs, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_bfs->bm );
 	#endif
 	int i;
-	boolean found = FALSE;
+	bool found = false;
 	successors_t successors;	
 	successors_create( &successors, 8, malloc, free );
 
@@ -177,7 +177,7 @@ boolean breadthfs_find( breadthfs_t* restrict p_bfs, const void* restrict start,
 		if( p_current_node->state == end )
 		{
 			p_bfs->node_path = p_current_node;
-			found = TRUE;
+			found = true;
 		}
 		else
 		{

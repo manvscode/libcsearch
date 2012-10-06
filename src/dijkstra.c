@@ -173,13 +173,13 @@ void dijkstra_set_successors_fxn( dijkstra_t* p_dijkstra, successors_fxn success
       e.) Add N to the closed list.
  * 4.) Return false.
  */
-boolean dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start, const void* restrict end )
+bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start, const void* restrict end )
 {
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_start( p_dijkstra->bm );
 	#endif
 	assert( p_dijkstra );
-	boolean found = FALSE;
+	bool found = false;
 	int i;
 	successors_t successors;	
 	successors_create( &successors, 8, malloc, free );
@@ -215,7 +215,7 @@ boolean dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict sta
  			 * in the dijkstra_node_t object. 
  			 */
 			p_dijkstra->node_path = p_current_node;
-			found = TRUE;
+			found = true;
 		}
 		else
 		{
