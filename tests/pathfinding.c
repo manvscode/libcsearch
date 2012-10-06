@@ -58,8 +58,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_GRIDWIDTH			250
-#define DEFAULT_GRIDHEIGHT			250
+#define DEFAULT_GRIDWIDTH			200
+#define DEFAULT_GRIDHEIGHT			200
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
@@ -194,7 +194,7 @@ void initialize( void )
 
 
 	// TO DO: Initialization code goes here...
-	//glEnable( GL_MAP2_VERTEX_3 );
+	glEnable( GL_MAP2_VERTEX_3 );
 	glEnable( GL_LINE_STIPPLE );
 
 
@@ -347,13 +347,13 @@ void resize( int width, int height )
 	glLoadIdentity( );
 	
 
-	if( height == 0 )
-		height = 1;
+#define max( x, y )              ((x) ^ (((x) ^ (y)) & -((x) < (y))))
+	height = max( 1, height );
 		
 	glOrtho( 0.0, width, 0.0, height, 0.0, 1.0 );
 	glMatrixMode( GL_MODELVIEW );
 
-	windowWidth = width;
+	windowWidth  = width;
 	windowHeight = height;
 
 
@@ -367,7 +367,7 @@ void resize( int width, int height )
 	glMap2f( GL_MAP2_VERTEX_3, 0.0f, 1.0f, 3, 2, 0.0f, 1.0f, 2 * 3, 2, (GLfloat *) grid );
 
 	// set tile dimensions...
-	tileWidth = (float) width / (float) gridWidth;
+	tileWidth  = (float) width / (float) gridWidth;
 	tileHeight = (float) height / (float) gridHeight;
 
 }
@@ -516,7 +516,7 @@ void mouse( int button, int state, int x, int y )
 	mouseButton = button;
 	mouseButtonState = state;
 
-	if( mouseButton == GLUT_MIDDLE_BUTTON && mouseButtonState == GLUT_DOWN )
+	if( mouseButton == GLUT_MIDDLE_BUTTON && mouseButtonState == GLUT_DOWN && y <= windowHeight )
 	{
 		unsigned int elementX =  x / tileWidth;
 		unsigned int elementY = (windowHeight - y) / tileHeight;
@@ -526,7 +526,7 @@ void mouse( int button, int state, int x, int y )
 
 		glutPostRedisplay( );
 	}
-	else if( mouseButton == GLUT_RIGHT_BUTTON && mouseButtonState == GLUT_DOWN )
+	else if( mouseButton == GLUT_RIGHT_BUTTON && mouseButtonState == GLUT_DOWN && y <= windowHeight )
 	{
 		unsigned int elementX =  x / tileWidth;
 		unsigned int elementY = (windowHeight - y) / tileHeight;
@@ -540,7 +540,7 @@ void mouse( int button, int state, int x, int y )
 
 void mouse_motion( int x, int y )
 {
-	if( mouseButton == GLUT_LEFT_BUTTON && mouseButtonState == GLUT_DOWN )
+	if( mouseButton == GLUT_LEFT_BUTTON && mouseButtonState == GLUT_DOWN && y <= windowHeight )
 	{
 		unsigned int elementX =  x / tileWidth;
 		unsigned int elementY = (windowHeight - y) / tileHeight;
@@ -638,12 +638,12 @@ void tile_successors8( const void* restrict state, successors_t* restrict p_succ
 
 	#if 1 //optimized version
 	int s4[]   = { -1, 1 };
-	size_t len = sizeof(s4) / sizeof(s4[0]);
+	size_t size = sizeof(s4) / sizeof(s4[0]);
 
 
-	for( int i = 0; i < len; i++ )
+	for( int i = 0; i < size; i++ )
 	{
-		for( int j = 0; j < len; j++ )
+		for( int j = 0; j < size; j++ )
 		{
 			int successorY = p_tile->position.y + s4[ j ];
 			int successorX = p_tile->position.x + s4[ i ];
@@ -690,8 +690,31 @@ void tile_successors4( const void* restrict state, successors_t* restrict p_succ
 {
 	const tile_t* p_tile = state;
 
+	#if 1 //optimized version
+	coordinate_t deltas[] = {
+		{ -1,  0 },
+		{  1,  0 },
+		{  0, -1 },
+		{  0,  1 },
+	};
+	int successorY;
+	int successorX;
+	const size_t size = sizeof(deltas)/sizeof(deltas[0]);
+	for( int i = 0; i < size; i++ )
+	{
+		successorY = p_tile->position.y + deltas[ i ].y;
+		successorX = p_tile->position.x + deltas[ i ].x;
 
-	#if 0 //optimized version
+		if( successorX >= 0 && successorX < gridWidth &&
+		    successorY >= 0 && successorY < gridHeight )
+		{
+			int index = successorY * gridWidth + successorX;
+
+			if( !tiles[ index ].is_walkable ) continue;
+
+			successors_push( p_successors, &tiles[ index ] );
+		}
+	}
 	#else // original code
 	for( int i = -1; i <= 1; i += 2 )
 	{
