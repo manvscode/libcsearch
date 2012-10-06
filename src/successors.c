@@ -70,7 +70,7 @@ boolean successors_push( successors_t* restrict p_successors, const void* restri
 	/* grow the array if needed */
 	if( successors_size(p_successors) >= successors_array_size(p_successors) )
 	{
-		size_t new_size          = 2 * p_successors->array_size + 1;
+		size_t new_size          = 1.5 * p_successors->array_size + 1;
 		p_successors->array_size = new_size;
 		p_successors->array      = realloc( p_successors->array, sizeof(void*) * successors_array_size(p_successors) );
 		assert( p_successors->array );
