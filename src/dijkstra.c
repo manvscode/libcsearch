@@ -46,7 +46,11 @@ struct dijkstra_algorithm {
 
 	pbheap_t         open_list; /* list of dijkstra_node_t* */
 	hash_map_t       open_hash_map; /* (state, dijkstra_node_t*) */
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 	tree_map_t       closed_list; /* (state, dijkstra_node_t*) */
+	#else
+	hash_map_t       closed_list; /* (state, dijkstra_node_t*) */
+	#endif
 
 	#ifdef DEBUG_DIJKSTRA
 	size_t       allocations;
@@ -94,7 +98,13 @@ dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn c
 						 state_hasher, nop_keyval_fxn, dijkstra_pointer_compare, 
 						 malloc, free );
 
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_create( &p_dijkstra->closed_list, nop_keyval_fxn, dijkstra_pointer_compare, malloc, free );
+		#else
+		hash_map_create( &p_dijkstra->closed_list, HASH_MAP_SIZE_MEDIUM, 
+						 state_hasher, nop_keyval_fxn, dijkstra_pointer_compare, 
+						 malloc, free );
+		#endif
 	}
 
 	return p_dijkstra;
@@ -111,7 +121,11 @@ void dijkstra_destroy( dijkstra_t** p_dijkstra )
 		dijkstra_cleanup( *p_dijkstra );
 		pbheap_destroy( &(*p_dijkstra)->open_list );		
 		hash_map_destroy( &(*p_dijkstra)->open_hash_map );		
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_destroy( &(*p_dijkstra)->closed_list );		
+		#else
+		hash_map_destroy( &(*p_dijkstra)->closed_list );		
+		#endif
 		free( *p_dijkstra );
 		*p_dijkstra = NULL;
 	}
@@ -215,7 +229,11 @@ boolean dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict sta
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
+				#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 				if( tree_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
+				#else
+				if( hash_map_find( &p_dijkstra->closed_list, successor_state, &found_node ) )
+				#endif
 				{
 					/* NOTE: The closed list is used to prevent re-examining
  					 * nodes that already have the minimal cost computed in
@@ -269,7 +287,11 @@ boolean dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict sta
 		}
 
 		/* e.) Add p_current_node to the closed list. */
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_insert( &p_dijkstra->closed_list, p_current_node->state, p_current_node );
+		#else
+		hash_map_insert( &p_dijkstra->closed_list, p_current_node->state, p_current_node );
+		#endif
 	}
 
 	#ifdef DEBUG_BEST_FIRST_SEARCH
@@ -284,19 +306,12 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 {
 	assert( p_dijkstra );
 	assert( hash_map_size(&p_dijkstra->open_hash_map) == pbheap_size(&p_dijkstra->open_list) );
-	#ifdef DEBUG_DIJKSTRA
-	size_t size2 = hash_map_size(&p_dijkstra->open_hash_map);	
-	size_t size3 = tree_map_size(&p_dijkstra->closed_list);	
-	assert( size2 + size3 == p_dijkstra->allocations );
-	#endif
 	
 	p_dijkstra->node_path = NULL;
+	pbheap_clear( &p_dijkstra->open_list );
 
 	hash_map_iterator_t open_itr;
-	tree_map_iterator_t closed_itr;
-	
 	hash_map_iterator( &p_dijkstra->open_hash_map, &open_itr );
-
 	// free everything on the open list.
 	while( hash_map_iterator_next( &open_itr ) )
 	{
@@ -306,7 +321,10 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 		p_dijkstra->allocations--;
 		#endif
 	}
+	hash_map_clear( &p_dijkstra->open_hash_map );
 
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
+	tree_map_iterator_t closed_itr;
 	// free everything on the closed list.
 	for( closed_itr = tree_map_begin( &p_dijkstra->closed_list );
 	     closed_itr != tree_map_end( );
@@ -317,11 +335,22 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 		p_dijkstra->allocations--;
 		#endif
 	}
-
-	// empty out the data structures
-	pbheap_clear( &p_dijkstra->open_list );
-	hash_map_clear( &p_dijkstra->open_hash_map );
 	tree_map_clear( &p_dijkstra->closed_list );
+	#else
+	hash_map_iterator_t closed_itr;
+	hash_map_iterator( &p_dijkstra->closed_list, &closed_itr );
+	// free everything on the open list.
+	while( hash_map_iterator_next( &closed_itr ) )
+	{
+		dijkstra_node_t* p_node = hash_map_iterator_value( &closed_itr );
+		free( p_node );	
+		#ifdef DEBUG_DIJKSTRA
+		p_dijkstra->allocations--;
+		#endif
+	}
+	hash_map_clear( &p_dijkstra->closed_list );
+	#endif
+
 }
 
 dijkstra_node_t* dijkstra_first_node( const dijkstra_t* p_dijkstra )

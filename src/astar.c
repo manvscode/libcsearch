@@ -47,7 +47,11 @@ struct astar_algorithm {
 
 	pbheap_t               open_list; /* list of astar_node_t* */
 	hash_map_t             open_hash_map; /* (state, astar_node_t*) */
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 	tree_map_t             closed_list; /* (state, astar_node_t*) */
+	#else
+	hash_map_t             closed_list; /* (state, astar_node_t*) */
+	#endif
 
 	#ifdef DEBUG_ASTAR
 	size_t       allocations;
@@ -98,7 +102,13 @@ astar_t* astar_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, cos
 						 state_hasher, nop_keyval_fxn, astar_pointer_compare, 
 						 malloc, free );
 
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_create( &p_astar->closed_list, nop_keyval_fxn, astar_pointer_compare, malloc, free );
+		#else
+		hash_map_create( &p_astar->closed_list, HASH_MAP_SIZE_MEDIUM, 
+						 state_hasher, nop_keyval_fxn, astar_pointer_compare, 
+						 malloc, free );
+		#endif
 	}
 
 	return p_astar;
@@ -115,7 +125,11 @@ void astar_destroy( astar_t** p_astar )
 		astar_cleanup( *p_astar );
 		pbheap_destroy( &(*p_astar)->open_list );		
 		hash_map_destroy( &(*p_astar)->open_hash_map );		
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_destroy( &(*p_astar)->closed_list );		
+		#else
+		hash_map_destroy( &(*p_astar)->closed_list );		
+		#endif
 		free( *p_astar );
 		*p_astar = NULL;
 
@@ -230,7 +244,11 @@ boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const
 
 				/* i.) If S is in the closed list: */
 				void* found_node;
+				#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 				if( tree_map_find( &p_astar->closed_list, successor_state, &found_node ) )
+				#else
+				if( hash_map_find( &p_astar->closed_list, successor_state, &found_node ) )
+				#endif
 				{
 					#if 1
 					continue;
@@ -251,7 +269,11 @@ boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const
 						p_found_node->f      = f;
 						p_found_node->parent = p_current_node;
 
+						#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 						tree_map_remove( &p_astar->closed_list, successor_state );
+						#else
+						hash_map_remove( &p_astar->closed_list, successor_state );
+						#endif
 
 						pbheap_push( &p_astar->open_list, p_found_node );
 						hash_map_insert( &p_astar->open_hash_map, p_found_node->state, p_found_node );
@@ -306,7 +328,11 @@ boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const
 		}
 
 		/* e.) Add p_current_node to the closed list. */
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_insert( &p_astar->closed_list, p_current_node->state, p_current_node );
+		#else
+		hash_map_insert( &p_astar->closed_list, p_current_node->state, p_current_node );
+		#endif
 	}
 	
 	#ifdef DEBUG_ASTAR
@@ -320,19 +346,12 @@ boolean astar_find( astar_t* restrict p_astar, const void* restrict start, const
 void astar_cleanup( astar_t* p_astar )
 {
 	assert( hash_map_size(&p_astar->open_hash_map) == pbheap_size(&p_astar->open_list) );
-	#ifdef DEBUG_ASTAR
-	size_t size2 = hash_map_size(&p_astar->open_hash_map);	
-	size_t size3 = tree_map_size(&p_astar->closed_list);	
-	assert( size2 + size3 == p_astar->allocations );
-	#endif
 	
 	p_astar->node_path = NULL;
+	pbheap_clear( &p_astar->open_list );
 
 	hash_map_iterator_t open_itr;
-	tree_map_iterator_t closed_itr;
-	
 	hash_map_iterator( &p_astar->open_hash_map, &open_itr );
-
 	// free everything on the open list.
 	while( hash_map_iterator_next( &open_itr ) )
 	{
@@ -342,7 +361,10 @@ void astar_cleanup( astar_t* p_astar )
 		p_astar->allocations--;
 		#endif
 	}
+	hash_map_clear( &p_astar->open_hash_map );
 
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
+	tree_map_iterator_t closed_itr;
 	// free everything on the closed list.
 	for( closed_itr = tree_map_begin( &p_astar->closed_list );
 	     closed_itr != tree_map_end( );
@@ -353,11 +375,21 @@ void astar_cleanup( astar_t* p_astar )
 		p_astar->allocations--;
 		#endif
 	}
-
-	// empty out the data structures
-	pbheap_clear( &p_astar->open_list );
-	hash_map_clear( &p_astar->open_hash_map );
 	tree_map_clear( &p_astar->closed_list );
+	#else
+	hash_map_iterator_t closed_itr;
+	hash_map_iterator( &p_astar->closed_list, &closed_itr );
+	// free everything on the open list.
+	while( hash_map_iterator_next( &closed_itr ) )
+	{
+		astar_node_t* p_node = hash_map_iterator_value( &closed_itr );
+		free( p_node );	
+		#ifdef DEBUG_ASTAR
+		p_astar->allocations--;
+		#endif
+	}
+	hash_map_clear( &p_astar->closed_list );
+	#endif
 }
 
 astar_node_t* astar_first_node( const astar_t* p_astar )

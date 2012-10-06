@@ -44,7 +44,11 @@ struct bestfs_algorithm {
 
 	pbheap_t               open_list; /* list of bestfs_node_t* */
 	hash_map_t             open_hash_map; /* (state, bestfs_node_t*) */
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 	tree_map_t             closed_list; /* (state, bestfs_node_t*) */
+	#else
+	hash_map_t             closed_list; /* (state, bestfs_node_t*) */
+	#endif
 
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	size_t       allocations;
@@ -95,7 +99,13 @@ bestfs_t* bestfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, s
 						 state_hasher, nop_keyval_fxn, bestfs_pointer_compare, 
 						 malloc, free );
 
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_create( &p_best->closed_list, nop_keyval_fxn, bestfs_pointer_compare, malloc, free );
+		#else
+		hash_map_create( &p_best->closed_list, HASH_MAP_SIZE_SMALL, 
+						 state_hasher, nop_keyval_fxn, bestfs_pointer_compare, 
+						 malloc, free );
+		#endif
 	}
 
 	return p_best;
@@ -112,7 +122,11 @@ void bestfs_destroy( bestfs_t** p_best )
 		bestfs_cleanup( *p_best );
 		pbheap_destroy( &(*p_best)->open_list );		
 		hash_map_destroy( &(*p_best)->open_hash_map );		
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_destroy( &(*p_best)->closed_list );		
+		#else
+		hash_map_destroy( &(*p_best)->closed_list );		
+		#endif
 		free( *p_best );
 		*p_best = NULL;
 
@@ -208,11 +222,15 @@ boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, cons
 			/* d.) For each successor node S: */
 			for( i = 0; i < successors_size(&successors); i++ )
 			{
-				const void* successor_state = successors_get( &successors, i );
+				const void* restrict successor_state = successors_get( &successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
+				#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 				if( tree_map_find( &p_best->closed_list, successor_state, &found_node ) )
+				#else
+				if( hash_map_find( &p_best->closed_list, successor_state, &found_node ) )
+				#endif
 				{
 					continue;
 				}
@@ -255,7 +273,11 @@ boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, cons
 		}
 
 		/* e.) Add p_current_node to the closed list. */
+		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
 		tree_map_insert( &p_best->closed_list, p_current_node->state, p_current_node );
+		#else
+		hash_map_insert( &p_best->closed_list, p_current_node->state, p_current_node );
+		#endif
 	}
 	
 	#ifdef DEBUG_BEST_FIRST_SEARCH
@@ -269,19 +291,12 @@ boolean bestfs_find( bestfs_t* restrict p_best, const void* restrict start, cons
 void bestfs_cleanup( bestfs_t* p_best )
 {
 	assert( hash_map_size(&p_best->open_hash_map) == pbheap_size(&p_best->open_list) );
-	#ifdef DEBUG_BEST_FIRST_SEARCH
-	size_t size2 = hash_map_size(&p_best->open_hash_map);	
-	size_t size3 = tree_map_size(&p_best->closed_list);	
-	assert( size2 + size3 == p_best->allocations );
-	#endif
 	
+	pbheap_clear( &p_best->open_list );
 	p_best->node_path = NULL;
 
 	hash_map_iterator_t open_itr;
-	tree_map_iterator_t closed_itr;
-	
 	hash_map_iterator( &p_best->open_hash_map, &open_itr );
-
 	// free everything on the open list.
 	while( hash_map_iterator_next( &open_itr ) )
 	{
@@ -291,7 +306,10 @@ void bestfs_cleanup( bestfs_t* p_best )
 		p_best->allocations--;
 		#endif
 	}
+	hash_map_clear( &p_best->open_hash_map );
 
+	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
+	tree_map_iterator_t closed_itr;
 	// free everything on the closed list.
 	for( closed_itr = tree_map_begin( &p_best->closed_list );
 	     closed_itr != tree_map_end( );
@@ -302,11 +320,22 @@ void bestfs_cleanup( bestfs_t* p_best )
 		p_best->allocations--;
 		#endif
 	}
-
-	// empty out the data structures
-	pbheap_clear( &p_best->open_list );
-	hash_map_clear( &p_best->open_hash_map );
 	tree_map_clear( &p_best->closed_list );
+	#else
+	hash_map_iterator_t closed_itr;
+	hash_map_iterator( &p_best->closed_list, &closed_itr );
+	// free everything on the open list.
+	while( hash_map_iterator_next( &closed_itr ) )
+	{
+		bestfs_node_t* p_node = hash_map_iterator_value( &closed_itr );
+		free( p_node );	
+		#ifdef DEBUG_BEST_FIRST_SEARCH
+		p_best->allocations--;
+		#endif
+	}
+	hash_map_clear( &p_best->closed_list );
+	#endif
+
 }
 
 bestfs_node_t* bestfs_first_node( const bestfs_t* p_best )
