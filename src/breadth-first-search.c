@@ -36,7 +36,7 @@ struct breadthfs_node {
 };
 
 struct breadthfs_algorithm {
-	//compare_fxn     compare;
+	compare_fxn       compare;
 	successors_fxn    successors_of;
 	breadthfs_node_t* node_path;
 
@@ -62,13 +62,13 @@ static int pointer_compare( const void* restrict p_n1, const void* restrict p_n2
 	return (int) diff;
 }
 
-breadthfs_t* breadthfs_create( state_hash_fxn state_hasher/*, compare_fxn compare*/, successors_fxn successors_of )
+breadthfs_t* breadthfs_create( compare_fxn compare, state_hash_fxn state_hasher, successors_fxn successors_of )
 {
 	breadthfs_t* p_bfs = (breadthfs_t*) malloc( sizeof(breadthfs_t) );
 
 	if( p_bfs )
 	{
-		//p_bfs->compare     = compare;
+		p_bfs->compare       = compare;
 		p_bfs->successors_of = successors_of;
 		p_bfs->node_path     = NULL;
 		#ifdef DEBUG_BREADTH_FIRST_SEARCH
@@ -101,15 +101,15 @@ void breadthfs_destroy( breadthfs_t** p_bfs )
 		*p_bfs = NULL;
 	}
 }
-/*
+
 void breadthfs_set_compare_fxn( breadthfs_t* p_bfs, compare_fxn compare )
 {
 	if( p_bfs )
 	{
+		assert( compare );
 		p_bfs->compare = compare;
 	}
 }
-*/
 
 void breadthfs_set_successors_fxn( breadthfs_t* p_bfs, successors_fxn successors_of )
 {

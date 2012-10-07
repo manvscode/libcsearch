@@ -78,8 +78,9 @@ typedef struct breadthfs_algorithm breadthfs_t;
 struct breadthfs_node;
 typedef struct breadthfs_node breadthfs_node_t;
 
-breadthfs_t*      breadthfs_create             ( state_hash_fxn state_hasher, successors_fxn successors_of );
+breadthfs_t*      breadthfs_create             ( compare_fxn compare, state_hash_fxn state_hasher, successors_fxn successors_of );
 void              breadthfs_destroy            ( breadthfs_t** p_bfs );
+void              breadthfs_set_compare_fxn    ( breadthfs_t* p_bfs, compare_fxn compare );
 void              breadthfs_set_successors_fxn ( breadthfs_t* p_bfs, successors_fxn successors_of );
 bool              breadthfs_find               ( breadthfs_t* restrict p_bfs, const void* restrict start, const void* restrict end );
 void              breadthfs_cleanup            ( breadthfs_t* p_bfs );
