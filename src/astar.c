@@ -46,12 +46,13 @@ struct astar_algorithm {
 	successors_fxn         successors_of;
 	astar_node_t*          node_path;
 
-	pbheap_t               open_list; /* list of astar_node_t* */
-	hash_map_t             open_hash_map; /* (state, astar_node_t*) */
+	successors_t  successors;	
+	pbheap_t      open_list; /* list of astar_node_t* */
+	hash_map_t    open_hash_map; /* (state, astar_node_t*) */
 	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
-	tree_map_t             closed_list; /* (state, astar_node_t*) */
+	tree_map_t    closed_list; /* (state, astar_node_t*) */
 	#else
-	hash_map_t             closed_list; /* (state, astar_node_t*) */
+	hash_map_t    closed_list; /* (state, astar_node_t*) */
 	#endif
 
 	#ifdef DEBUG_ASTAR
@@ -96,6 +97,8 @@ astar_t* astar_create( compare_fxn compare, state_hash_fxn state_hasher, heurist
 		p_astar->bm            = bench_mark_create( "A* Search Algorithm" );
 		#endif
 
+		successors_create( &p_astar->successors, 8, malloc, free );
+
 		pbheap_create( &p_astar->open_list, 128, 
 					  (heap_compare_function) best_f_compare, 
 					  malloc, free );
@@ -125,6 +128,7 @@ void astar_destroy( astar_t** p_astar )
 		#endif
 
 		astar_cleanup( *p_astar );
+		successors_destroy( &(*p_astar)->successors );
 		pbheap_destroy( &(*p_astar)->open_list );		
 		hash_map_destroy( &(*p_astar)->open_hash_map );		
 		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
@@ -208,8 +212,6 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 	#endif
 	bool found = false;
 	int i;
-	successors_t successors;	
-	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	astar_cleanup( p_astar );
@@ -246,12 +248,12 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 		else
 		{
 			/* c.) Get the successor nodes of p_current_node. */
-			p_astar->successors_of( p_current_node->state, &successors ); 
+			p_astar->successors_of( p_current_node->state, &p_astar->successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < successors_size(&successors); i++ )
+			for( i = 0; i < successors_size(&p_astar->successors); i++ )
 			{
-				const void* successor_state = successors_get( &successors, i );
+				const void* successor_state = successors_get( &p_astar->successors, i );
 
 				/* i.) If S is in the closed list: */
 				void* found_node;
@@ -335,7 +337,7 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 				}
 			} /* for */
 			
-			successors_clear( &successors );
+			successors_clear( &p_astar->successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
@@ -346,7 +348,6 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 		#endif
 	}
 	
-	successors_destroy( &successors );
 	#ifdef DEBUG_ASTAR
 	bench_mark_end( p_astar->bm );
 	bench_mark_report( p_astar->bm );
@@ -360,6 +361,7 @@ void astar_cleanup( astar_t* p_astar )
 	assert( hash_map_size(&p_astar->open_hash_map) == pbheap_size(&p_astar->open_list) );
 	
 	p_astar->node_path = NULL;
+	successors_clear( &p_astar->successors );
 	pbheap_clear( &p_astar->open_list );
 
 	hash_map_iterator_t open_itr;

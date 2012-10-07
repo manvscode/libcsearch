@@ -43,6 +43,7 @@ struct bestfs_algorithm {
 	successors_fxn successors_of;
 	bestfs_node_t* node_path;
 
+	successors_t           successors;	
 	pbheap_t               open_list; /* list of bestfs_node_t* */
 	hash_map_t             open_hash_map; /* (state, bestfs_node_t*) */
 	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
@@ -93,6 +94,8 @@ bestfs_t* bestfs_create( compare_fxn compare, state_hash_fxn state_hasher, heuri
 		p_best->bm            = bench_mark_create( "Best First Search Algorithm" );
 		#endif
 
+		successors_create( &p_best->successors, 8, malloc, free );
+
 		pbheap_create( &p_best->open_list, 128, 
 					   bestfs_heuristic_compare, 
 					   malloc, free );
@@ -122,6 +125,7 @@ void bestfs_destroy( bestfs_t** p_best )
 		#endif
 
 		bestfs_cleanup( *p_best );
+		successors_destroy( &(*p_best)->successors );
 		pbheap_destroy( &(*p_best)->open_list );		
 		hash_map_destroy( &(*p_best)->open_hash_map );		
 		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
@@ -192,8 +196,6 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 	#endif
 	bool found = false;
 	int i;
-	successors_t successors;	
-	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	bestfs_cleanup( p_best );
@@ -228,12 +230,12 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 		else
 		{
 			/* c.) Get the successor nodes of p_current_node. */
-			p_best->successors_of( p_current_node->state, &successors ); 
+			p_best->successors_of( p_current_node->state, &p_best->successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < successors_size(&successors); i++ )
+			for( i = 0; i < successors_size(&p_best->successors); i++ )
 			{
-				const void* restrict successor_state = successors_get( &successors, i );
+				const void* restrict successor_state = successors_get( &p_best->successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
@@ -280,7 +282,7 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 				}
 			} /* for */
 			
-			successors_clear( &successors );
+			successors_clear( &p_best->successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
@@ -291,7 +293,6 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 		#endif
 	}
 	
-	successors_destroy( &successors );
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_end( p_best->bm );
 	bench_mark_report( p_best->bm );
@@ -304,6 +305,7 @@ void bestfs_cleanup( bestfs_t* p_best )
 {
 	assert( hash_map_size(&p_best->open_hash_map) == pbheap_size(&p_best->open_list) );
 	
+	successors_clear( &p_best->successors );
 	pbheap_clear( &p_best->open_list );
 	p_best->node_path = NULL;
 

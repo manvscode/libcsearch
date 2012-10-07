@@ -45,12 +45,13 @@ struct dijkstra_algorithm {
 	successors_fxn       successors_of;
 	dijkstra_node_t*     node_path;
 
-	pbheap_t         open_list; /* list of dijkstra_node_t* */
-	hash_map_t       open_hash_map; /* (state, dijkstra_node_t*) */
+	successors_t successors;	
+	pbheap_t     open_list; /* list of dijkstra_node_t* */
+	hash_map_t   open_hash_map; /* (state, dijkstra_node_t*) */
 	#ifdef USE_TREEMAP_FOR_CLOSEDLIST
-	tree_map_t       closed_list; /* (state, dijkstra_node_t*) */
+	tree_map_t   closed_list; /* (state, dijkstra_node_t*) */
 	#else
-	hash_map_t       closed_list; /* (state, dijkstra_node_t*) */
+	hash_map_t   closed_list; /* (state, dijkstra_node_t*) */
 	#endif
 
 	#ifdef DEBUG_DIJKSTRA
@@ -92,6 +93,8 @@ dijkstra_t* dijkstra_create( compare_fxn compare, state_hash_fxn state_hasher, n
 		p_dijkstra->bm            = bench_mark_create( "Dijkstra's Search Algorithm" );
 		#endif
 
+		successors_create( &p_dijkstra->successors, 8, malloc, free );
+
 		pbheap_create( &p_dijkstra->open_list, 128, 
 					  (heap_compare_function) best_cost_compare, 
 					  malloc, free );
@@ -121,6 +124,7 @@ void dijkstra_destroy( dijkstra_t** p_dijkstra )
 		#endif
 
 		dijkstra_cleanup( *p_dijkstra );
+		successors_destroy( &(*p_dijkstra)->successors );
 		pbheap_destroy( &(*p_dijkstra)->open_list );		
 		hash_map_destroy( &(*p_dijkstra)->open_hash_map );		
 		#ifdef USE_TREEMAP_FOR_CLOSEDLIST
@@ -192,8 +196,6 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 	assert( p_dijkstra );
 	bool found = false;
 	int i;
-	successors_t successors;	
-	successors_create( &successors, 8, malloc, free );
 
  	/* 1.) Set the open list and closed list to be empty. */
 	dijkstra_cleanup( p_dijkstra );
@@ -231,12 +233,12 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 		else
 		{
 			/* c.) Get the successor nodes of N. */
-			p_dijkstra->successors_of( p_current_node->state, &successors ); 
+			p_dijkstra->successors_of( p_current_node->state, &p_dijkstra->successors ); 
 
 			/* d.) For each successor node S: */
-			for( i = 0; i < successors_size(&successors); i++ )
+			for( i = 0; i < successors_size(&p_dijkstra->successors); i++ )
 			{
-				const void* successor_state = successors_get( &successors, i );
+				const void* successor_state = successors_get( &p_dijkstra->successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;
@@ -294,7 +296,7 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 				}
 			} /* for */
 			
-			successors_clear( &successors );
+			successors_clear( &p_dijkstra->successors );
 		}
 
 		/* e.) Add p_current_node to the closed list. */
@@ -305,7 +307,6 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 		#endif
 	}
 
-	successors_destroy( &successors );
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_end( p_dijkstra->bm );
 	bench_mark_report( p_dijkstra->bm );
@@ -320,6 +321,7 @@ void dijkstra_cleanup( dijkstra_t* p_dijkstra )
 	assert( hash_map_size(&p_dijkstra->open_hash_map) == pbheap_size(&p_dijkstra->open_list) );
 	
 	p_dijkstra->node_path = NULL;
+	successors_clear( &p_dijkstra->successors );
 	pbheap_clear( &p_dijkstra->open_list );
 
 	hash_map_iterator_t open_itr;
