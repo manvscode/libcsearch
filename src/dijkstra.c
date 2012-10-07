@@ -40,6 +40,7 @@ struct dijkstra_node {
 };
 
 struct dijkstra_algorithm {
+	compare_fxn          compare;
 	nonnegative_cost_fxn cost;
 	successors_fxn       successors_of;
 	dijkstra_node_t*     node_path;
@@ -76,12 +77,13 @@ static int best_cost_compare( const void* restrict p_n1, const void* restrict p_
 	return default_cost_compare(((dijkstra_node_t*)p_n1)->c,  ((dijkstra_node_t*)p_n2)->c);
 }
 
-dijkstra_t* dijkstra_create( state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of )
+dijkstra_t* dijkstra_create( compare_fxn compare, state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of )
 {
 	dijkstra_t* p_dijkstra = (dijkstra_t*) malloc( sizeof(dijkstra_t) );
 
 	if( p_dijkstra )
 	{
+		p_dijkstra->compare       = compare;
 		p_dijkstra->cost          = cost;
 		p_dijkstra->successors_of = successors_of;
 		p_dijkstra->node_path     = NULL;
@@ -128,6 +130,15 @@ void dijkstra_destroy( dijkstra_t** p_dijkstra )
 		#endif
 		free( *p_dijkstra );
 		*p_dijkstra = NULL;
+	}
+}
+
+void dijkstra_set_compare_fxn( dijkstra_t* p_dijkstra, compare_fxn compare )
+{
+	if( p_dijkstra )
+	{
+		assert( compare );
+		p_dijkstra->compare = compare;
 	}
 }
 
@@ -209,7 +220,7 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 		hash_map_remove( &p_dijkstra->open_hash_map, p_current_node->state );
 					
 		/* b.) If N is the goal node, return true. */
-		if( p_current_node->state == end )
+		if( p_dijkstra->compare( p_current_node->state, end ) == 0 )
 		{
 			/* NOTE: This final node will not have the final cost
  			 * in the dijkstra_node_t object. 

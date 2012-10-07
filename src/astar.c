@@ -40,6 +40,7 @@ struct astar_node {
 };
 
 struct astar_algorithm {
+	compare_fxn            compare;
 	heuristic_fxn          heuristic;
 	cost_fxn               cost;
 	successors_fxn         successors_of;
@@ -79,12 +80,13 @@ static int best_f_compare( const void* restrict p_n1, const void* restrict p_n2 
 }
 
 
-astar_t* astar_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, cost_fxn cost, successors_fxn successors_of )
+astar_t* astar_create( compare_fxn compare, state_hash_fxn state_hasher, heuristic_fxn heuristic, cost_fxn cost, successors_fxn successors_of )
 {
 	astar_t* p_astar = (astar_t*) malloc( sizeof(astar_t) );
 
 	if( p_astar )
 	{
+		p_astar->compare       = compare;
 		p_astar->heuristic     = heuristic;
 		p_astar->cost          = cost;
 		p_astar->successors_of = successors_of;
@@ -133,6 +135,15 @@ void astar_destroy( astar_t** p_astar )
 		free( *p_astar );
 		*p_astar = NULL;
 
+	}
+}
+
+void astar_set_compare_fxn( astar_t* p_astar, compare_fxn compare )
+{
+	if( p_astar )
+	{
+		assert( compare );
+		p_astar->compare = compare;
 	}
 }
 
@@ -227,7 +238,7 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 		hash_map_remove( &p_astar->open_hash_map, p_current_node->state );
 					
 		/* b.) If p_current_node is the goal node, return true. */
-		if( p_current_node->state == end )
+		if( p_astar->compare( p_current_node->state, end ) == 0 )
 		{
 			p_astar->node_path = p_current_node;
 			found = true;

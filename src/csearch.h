@@ -121,8 +121,9 @@ typedef struct bestfs_algorithm bestfs_t;
 struct bestfs_node;
 typedef struct bestfs_node bestfs_node_t;
 
-bestfs_t*      bestfs_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
+bestfs_t*      bestfs_create             ( compare_fxn compare, state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of );
 void           bestfs_destroy            ( bestfs_t** p_best );
+void           bestfs_set_compare_fxn    ( bestfs_t* p_best, compare_fxn compare );
 void           bestfs_set_heuristic_fxn  ( bestfs_t* p_best, heuristic_fxn heuristic );
 void           bestfs_set_successors_fxn ( bestfs_t* p_best, successors_fxn successors_of );
 bool           bestfs_find               ( bestfs_t* restrict p_best, const void* restrict start, const void* restrict end );
@@ -157,8 +158,9 @@ typedef struct dijkstra_algorithm dijkstra_t;
 struct dijkstra_node;
 typedef struct dijkstra_node dijkstra_node_t;
 
-dijkstra_t*      dijkstra_create             ( state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of );
+dijkstra_t*      dijkstra_create             ( compare_fxn compare, state_hash_fxn state_hasher, nonnegative_cost_fxn cost, successors_fxn successors_of );
 void             dijkstra_destroy            ( dijkstra_t** p_dijkstra );
+void             dijkstra_set_compare_fxn    ( dijkstra_t* p_dijkstra, compare_fxn compare );
 void             dijkstra_set_cost_fxn       ( dijkstra_t* p_dijkstra, nonnegative_cost_fxn cost );
 void             dijkstra_set_successors_fxn ( dijkstra_t* p_dijkstra, successors_fxn successors_of );
 bool             dijkstra_find               ( dijkstra_t* restrict p_dijkstra, const void* restrict start, const void* restrict end );
@@ -207,8 +209,9 @@ typedef struct astar_algorithm astar_t;
 struct astar_node;
 typedef struct astar_node astar_node_t;
 
-astar_t*      astar_create             ( state_hash_fxn state_hasher, heuristic_fxn heuristic, cost_fxn cost, successors_fxn successors_of );
+astar_t*      astar_create             ( compare_fxn compare, state_hash_fxn state_hasher, heuristic_fxn heuristic, cost_fxn cost, successors_fxn successors_of );
 void          astar_destroy            ( astar_t** p_astar );
+void          astar_set_compare_fxn    ( astar_t* p_astar, compare_fxn compare );
 void          astar_set_heuristic_fxn  ( astar_t* p_astar, heuristic_fxn heuristic );
 void          astar_set_cost_fxn       ( astar_t* p_astar, cost_fxn cost );
 void          astar_set_successors_fxn ( astar_t* p_astar, successors_fxn successors_of );

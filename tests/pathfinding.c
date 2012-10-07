@@ -163,6 +163,10 @@ int main( int argc, char *argv[] )
 
 	return 0;
 }
+static int pointer_compare( const void* left, const void* right )
+{
+	return left == right ? 0 : 1;
+}
 
 void initialize( void )
 {
@@ -170,9 +174,9 @@ void initialize( void )
 	pvector_create( &dijkstra_path, 1, malloc, free );
 	pvector_create( &astar_path, 1, malloc, free );
 
-	bfs      = bestfs_create   ( pointer_hash, tile_euclidean_distance, tile_successors4 );
-	dijkstra = dijkstra_create ( pointer_hash, tile_positive_cost, tile_successors4 );
-	ass      = astar_create    ( pointer_hash, tile_euclidean_distance, tile_cost, tile_successors4 );
+	bfs      = bestfs_create   ( pointer_compare, pointer_hash, tile_euclidean_distance, tile_successors4 );
+	dijkstra = dijkstra_create ( pointer_compare, pointer_hash, tile_positive_cost, tile_successors4 );
+	ass      = astar_create    ( pointer_compare, pointer_hash, tile_euclidean_distance, tile_cost, tile_successors4 );
 
 	glDisable( GL_DEPTH_TEST );
 	

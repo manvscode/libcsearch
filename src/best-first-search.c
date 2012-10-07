@@ -38,6 +38,7 @@ struct bestfs_node {
 };
 
 struct bestfs_algorithm {
+	compare_fxn    compare;
 	heuristic_fxn  heuristic;
 	successors_fxn successors_of;
 	bestfs_node_t* node_path;
@@ -77,12 +78,13 @@ static int bestfs_heuristic_compare( const void* restrict p_n1, const void* rest
 
 
 	
-bestfs_t* bestfs_create( state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of )
+bestfs_t* bestfs_create( compare_fxn compare, state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of )
 {
 	bestfs_t* p_best = (bestfs_t*) malloc( sizeof(bestfs_t) );
 
 	if( p_best )
 	{
+		p_best->compare       = compare;
 		p_best->heuristic     = heuristic;
 		p_best->successors_of = successors_of;
 		p_best->node_path     = NULL;
@@ -130,6 +132,15 @@ void bestfs_destroy( bestfs_t** p_best )
 		free( *p_best );
 		*p_best = NULL;
 
+	}
+}
+
+void bestfs_set_compare_fxn( bestfs_t* p_best, compare_fxn compare )
+{
+	if( p_best )
+	{
+		assert( compare );
+		p_best->compare = compare;
 	}
 }
 
@@ -209,7 +220,7 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 		hash_map_remove( &p_best->open_hash_map, p_current_node->state );
 					
 		/* b.) If p_current_node is the goal node, return true. */
-		if( p_current_node->state == end )
+		if( p_best->compare( p_current_node->state, end ) == 0 )
 		{
 			p_best->node_path = p_current_node;
 			found = true;
