@@ -281,7 +281,9 @@ void draw_board( int step, const int *board )
 		for( int x = 0; x < BOARD_WIDTH; x++ )
 		{
 			size_t index = BOARD_WIDTH * y + x;
-			printf( "|%d", board[index] );
+			int num      = board[ index ];
+
+			printf( "|%c", num == 0 ? ' ' : '0' + num );
 		}
 
 		printf( "|\n" );
