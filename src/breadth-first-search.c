@@ -223,6 +223,7 @@ bool breadthfs_find( breadthfs_t* restrict p_bfs, const void* restrict start, co
 		tree_map_insert( &p_bfs->closed_list, p_current_node->state, p_current_node );
 	}
 
+	successors_destroy( &successors );
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_end( p_bfs->bm );
 	bench_mark_report( p_bfs->bm );

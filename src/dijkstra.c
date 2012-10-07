@@ -305,6 +305,7 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 		#endif
 	}
 
+	successors_destroy( &successors );
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_end( p_dijkstra->bm );
 	bench_mark_report( p_dijkstra->bm );

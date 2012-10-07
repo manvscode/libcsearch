@@ -346,6 +346,7 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 		#endif
 	}
 	
+	successors_destroy( &successors );
 	#ifdef DEBUG_ASTAR
 	bench_mark_end( p_astar->bm );
 	bench_mark_report( p_astar->bm );

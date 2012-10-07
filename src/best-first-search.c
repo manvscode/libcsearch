@@ -291,6 +291,7 @@ bool bestfs_find( bestfs_t* restrict p_best, const void* restrict start, const v
 		#endif
 	}
 	
+	successors_destroy( &successors );
 	#ifdef DEBUG_BEST_FIRST_SEARCH
 	bench_mark_end( p_best->bm );
 	bench_mark_report( p_best->bm );
