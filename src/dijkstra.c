@@ -238,7 +238,7 @@ bool dijkstra_find( dijkstra_t* restrict p_dijkstra, const void* restrict start,
 			/* d.) For each successor node S: */
 			for( i = 0; i < successors_size(&p_dijkstra->successors); i++ )
 			{
-				const void* successor_state = successors_get( &p_dijkstra->successors, i );
+				const void* restrict successor_state = successors_get( &p_dijkstra->successors, i );
 
 				/* i.) If S is in the closed list, continue. */
 				void* found_node;

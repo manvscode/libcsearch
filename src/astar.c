@@ -253,7 +253,7 @@ bool astar_find( astar_t* restrict p_astar, const void* restrict start, const vo
 			/* d.) For each successor node S: */
 			for( i = 0; i < successors_size(&p_astar->successors); i++ )
 			{
-				const void* successor_state = successors_get( &p_astar->successors, i );
+				const void* restrict successor_state = successors_get( &p_astar->successors, i );
 
 				/* i.) If S is in the closed list: */
 				void* found_node;
