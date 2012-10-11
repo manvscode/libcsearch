@@ -174,9 +174,9 @@ void initialize( void )
 	pvector_create( &dijkstra_path, 1, malloc, free );
 	pvector_create( &astar_path, 1, malloc, free );
 
-	bfs      = bestfs_create   ( pointer_compare, pointer_hash, tile_euclidean_distance, tile_successors4 );
+	bfs      = bestfs_create   ( pointer_compare, pointer_hash, tile_manhattan_distance, tile_successors4 );
 	dijkstra = dijkstra_create ( pointer_compare, pointer_hash, tile_positive_cost, tile_successors4 );
-	ass      = astar_create    ( pointer_compare, pointer_hash, tile_euclidean_distance, tile_cost, tile_successors4 );
+	ass      = astar_create    ( pointer_compare, pointer_hash, tile_manhattan_distance, tile_cost, tile_successors4 );
 
 	glDisable( GL_DEPTH_TEST );
 	
