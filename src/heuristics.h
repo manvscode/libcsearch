@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 by Joseph A. Marrero and Shrewd LLC. http://www.manvscode.com/
+ * Copyright (C) 2012 Joseph A. Marrero.  http://www.manvscode.com/
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,10 @@
  */
 #ifndef _GSEARCH_H_
 #define _GSEARCH_H_
+
 #ifdef __cplusplus
 extern "C" {
+namespace csearch {
 #endif 
 
 typedef struct coordinate {
@@ -33,11 +35,12 @@ typedef struct coordinate {
 /*
  *  Common Search Heuristics
  */
-unsigned int manhattan_distance ( const coordinate_t *c1, const coordinate_t *c2 );
-unsigned int euclidean_distance ( const coordinate_t *c1, const coordinate_t *c2 );
+unsigned int manhattan_distance ( const coordinate_t* c1, const coordinate_t* c2 );
+unsigned int euclidean_distance ( const coordinate_t* c1, const coordinate_t* c2 );
 
 
 #ifdef __cplusplus
-}
+} /* extern C Linkage */
+} /* namespace csearch */
 #endif 
 #endif /* _GSEARCH_H_ */

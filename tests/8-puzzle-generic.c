@@ -41,7 +41,7 @@ const int GOAL_STATE[] = {
  * A collection of all of the game board
  * states that was a possibility.
  */
-lc_pvector_t states;
+pvector_t states;
 
 static void randomize_board    ( int board[], size_t width, size_t height, bool only_solvable );
 static int* create_state       ( int *board, size_t size, size_t index, size_t move_index );
@@ -56,7 +56,7 @@ int main( int argc, char *argv[] )
 {
 	srand( time(NULL) );
 	pvector_create( &states, 100, malloc, free );
-	astar_t* p_astar = astar_create( board_compare, pointer_hash, heuristic, cost, get_possible_moves, malloc, free );
+	astar_t* p_astar = astar_create( board_compare, pointer_hash, heuristic, cost, get_possible_moves );
 
 	/* Produce a solvable random board */
 	int* initial_state = (int*) malloc( sizeof(int) * BOARD_WIDTH * BOARD_HEIGHT );
@@ -64,14 +64,14 @@ int main( int argc, char *argv[] )
 	pvector_push( &states, initial_state );
 
 
-	if( astar_find( p_astar, GOAL_STATE, initial_state ) )
+	if( csearch_find( p_astar, GOAL_STATE, initial_state ) )
 	{
 		int step = 0;
-		for( astar_node_t* p_node = astar_first_node( p_astar );
+		for( astar_node_t* p_node = csearch_first_node( p_astar );
 			 p_node != NULL;
-			 p_node = astar_next_node( p_node ) )
+			 p_node = csearch_next_node( p_node ) )
 		{
-			const int* board = astar_state( p_node );
+			const int* board = csearch_state( p_node );
 
 			draw_board( step, board );
 			printf("\n");
@@ -79,7 +79,7 @@ int main( int argc, char *argv[] )
 			step++;
 		}
 
-		astar_cleanup( p_astar );
+		csearch_cleanup( p_astar );
 	}
 	else
 	{
@@ -88,7 +88,7 @@ int main( int argc, char *argv[] )
 		/* No solution found. */
 	}
 
-	astar_destroy( &p_astar );
+	csearch_destroy( &p_astar );
 
 	/* Release memory of all the possible states. */
 	while( pvector_size( &states ) > 0 )

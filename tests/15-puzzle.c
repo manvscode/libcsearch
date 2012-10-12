@@ -1,11 +1,29 @@
-/* Coded by Joe Marrero, October 10, 2012.
- * http://www.manvscode.com/
+/*
+ * Copyright (C) 2012 Joseph A. Marrero.  http://www.manvscode.com/
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <libcsearch/csearch.h>
-#include <libcsearch/heuristics.h>
+#include <csearch.h>
+#include <heuristics.h>
 #include <libcollections/vector.h>
 #include <libcollections/hash-functions.h>
 
@@ -26,7 +44,7 @@ const int GOAL_STATE[] = {
  * A collection of all of the game board
  * states that was a possibility.
  */
-pvector_t states;
+lc_pvector_t states;
 
 static void randomize_board    ( int board[], size_t width, size_t height, bool only_solvable );
 static int* create_state       ( int *board, size_t size, size_t index, size_t move_index );
@@ -41,7 +59,7 @@ int main( int argc, char *argv[] )
 {
 	srand( time(NULL) );
 	pvector_create( &states, 100, malloc, free );
-	astar_t* p_astar = astar_create( board_compare, pointer_hash, heuristic, cost, get_possible_moves );
+	astar_t* p_astar = astar_create( board_compare, pointer_hash, heuristic, cost, get_possible_moves, malloc, free );
 
 	/* Produce a solvable random board */
 	int* initial_state = (int*) malloc( sizeof(int) * BOARD_WIDTH * BOARD_HEIGHT );
@@ -60,7 +78,7 @@ int main( int argc, char *argv[] )
 
 			draw_board( step, board );
 			printf("\n");
-			
+
 			step++;
 		}
 
@@ -72,7 +90,7 @@ int main( int argc, char *argv[] )
 		draw_board( 0, initial_state );
 		/* No solution found. */
 	}
-	
+
 	astar_destroy( &p_astar );
 
 	/* Release memory of all the possible states. */
@@ -116,7 +134,6 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 	else
 	{
 		/* Start with the goal */
-		
 		int current_board[ width * height ];
 		memcpy( current_board, GOAL_STATE, sizeof(int) * width * height );
 
@@ -153,16 +170,16 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 							if( move_x >= 0 && move_x < width &&
 		 					    move_y >= 0 && move_y < height )
 							{
-								/* make the move */	
+								/* make the move */
 								size_t move_index = width * move_y + move_x;
 
 								int tmp = current_board[ index ];
-								current_board[ index ] = current_board[ move_index ];	
+								current_board[ index ] = current_board[ move_index ];
 								current_board[ move_index ] = tmp;
 
 								moved = true;
 							}
-						}	
+						}
 					}
 				}
 			}
@@ -186,7 +203,7 @@ int* create_state( int *board, size_t size, size_t index, size_t move_index )
 		memcpy( new_board, board, sizeof(int) * size );
 
 		int tmp = new_board[ index ];
-		new_board[ index ] = new_board[ move_index ];	
+		new_board[ index ] = new_board[ move_index ];
 		new_board[ move_index ] = tmp;
 
 		pvector_push( &states, new_board );
@@ -204,7 +221,7 @@ int* create_state( int *board, size_t size, size_t index, size_t move_index )
 /*
  * Given a game board state, what are all of the possible
  * game boards that can result from all of the potential
- * moves. 
+ * moves.
  */
 void get_possible_moves( const void* restrict state, successors_t* restrict p_successors )
 {
@@ -247,7 +264,7 @@ void get_possible_moves( const void* restrict state, successors_t* restrict p_su
 			if( move_x >= 0 && move_x < BOARD_WIDTH &&
 				move_y >= 0 && move_y < BOARD_HEIGHT )
 			{
-				/* make the move */	
+				/* make the move */
 				size_t move_index = BOARD_WIDTH * move_y + move_x;
 
 				int* new_state = create_state( current_board, BOARD_WIDTH * BOARD_HEIGHT, index, move_index );
@@ -315,13 +332,13 @@ int heuristic( const void* restrict state1, const void* restrict state2 )
 	{
 		for( int x1 = 0; x1 < BOARD_WIDTH; x1++ )
 		{
-			size_t index1 = BOARD_WIDTH * y1 + x1;		
+			size_t index1 = BOARD_WIDTH * y1 + x1;
 
 			for( int y2 = 0; y2 < BOARD_HEIGHT; y2++ )
 			{
 				for( int x2 = 0; x2 < BOARD_WIDTH; x2++ )
 				{
-					size_t index2 = BOARD_WIDTH * y2 + x2;		
+					size_t index2 = BOARD_WIDTH * y2 + x2;
 
 					if( board1[ index1 ] == board2[ index2 ] )
 					{
@@ -332,7 +349,7 @@ int heuristic( const void* restrict state1, const void* restrict state2 )
 		}
 	}
 
-	return sum;		
+	return sum;
 }
 
 /*
@@ -349,7 +366,7 @@ int cost( const void* restrict state1, const void* restrict state2 )
 }
 
 /*
- * Two game board states are equal if every number is in the same 
+ * Two game board states are equal if every number is in the same
  * position in both.
  */
 int board_compare( const void* restrict state1, const void* restrict state2 )

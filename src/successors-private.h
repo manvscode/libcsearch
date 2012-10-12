@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 by Joseph A. Marrero and Shrewd LLC. http://www.manvscode.com/
+ * Copyright (C) 2012 Joseph A. Marrero.  http://www.manvscode.com/
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ struct successors {
 };
 
 bool successors_create  ( successors_t *p_successors, size_t size, alloc_function alloc, free_function free );
-void    successors_destroy ( successors_t *p_successors );
+void successors_destroy ( successors_t *p_successors );
 
 #define successors_array( p_successors )       ((p_successors)->array)
 #define successors_array_size( p_successors )  ((p_successors)->array_size)
@@ -56,12 +56,12 @@ void    successors_destroy ( successors_t *p_successors );
 #define successors_clear( p_successors )       ((p_successors)->size = 0)
 
 
-static inline void* successors_get( successors_t* restrict p_successors, size_t index )
+static __inline void* successors_get( successors_t* __restrict p_successors, size_t index )
 {
 	return p_successors->array[ index ];
 }
 
-static inline void successors_set( successors_t* restrict p_successors, size_t index, void* restrict p_data )
+static __inline void successors_set( successors_t* __restrict p_successors, size_t index, void* __restrict p_data )
 {
 	p_successors->array[ index ] = p_data;
 }

@@ -1,6 +1,6 @@
 
 # Add new files in alphabetical order. Thanks.
-libcsearch_src = astar.c best-first-search.c breadth-first-search.c dijkstra.c heuristics.c list.c successors.c
+libcsearch_src = astar.c best-first-search.c breadth-first-search.c depth-first-search.c dijkstra.c heuristics.c list.c successors.c
 
 # Add new files in alphabetical order. Thanks.
 libcsearch_headers = csearch.h heuristics.h

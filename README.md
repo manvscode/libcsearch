@@ -1,11 +1,54 @@
 libcsearch
 ============
-
-A C library of combinatorial search algorithms.  Basically this is a port of some my C++ code to C.
+A C library of combinatorial search algorithms. These algorithms are useful for solving puzzles, 
+finding data in large search spaces, and path finding for video games.
 
 Supported Algorithms
 ====================
 * Breadth First Search
+* Depth First Search
 * Best First Search
 * A* Search
 * Dijkstra Search
+
+Common Hueristics
+====================
+* Manhattan Distance
+* Euclidean Distance
+
+Screenshots
+=================
+![Combinatorial Search Screenshot 1](http://farm3.staticflickr.com/2558/3802832676_7598de369c_z.jpg "Combinatorial Search Screenshot 1")
+
+![Combinatorial Search Screenshot 2](http://farm3.staticflickr.com/2523/3802017359_16de31dff3_z.jpg "Combinatorial Search Screenshot 2")
+
+![Combinatorial Search Screenshot 3](http://farm3.staticflickr.com/2685/4122739897_1a01eca50c_z.jpg "Combinatorial Search Screenshot 3")
+
+Roadmap
+=================
+* Add support for jump point search.
+* Add support for a pattern database.
+* Find further optimization opportunities in the code.
+
+License
+=================
+    Copyright (C) 2012 Joseph A. Marrero.  http://www.manvscode.com/
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+    
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+

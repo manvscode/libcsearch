@@ -22,7 +22,9 @@
 *.log
 
 # Test Programs 
-bin/*
+bin/8-puzzle*
+bin/15-puzzle*
+bin/pathfinding*
 
 # Autoconf files
 Makefile
