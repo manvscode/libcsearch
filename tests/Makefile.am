@@ -4,7 +4,9 @@ LDADD     = -lcsearch -lcollections -lGL -lglut
 
 bin_PROGRAMS = \
 $(top_builddir)/bin/pathfinding \
-$(top_builddir)/bin/8-puzzle 
+$(top_builddir)/bin/8-puzzle \
+$(top_builddir)/bin/15-puzzle 
 
 __top_builddir__bin_pathfinding_SOURCES        = pathfinding.c
 __top_builddir__bin_8_puzzle_SOURCES           = 8-puzzle.c
+__top_builddir__bin_15_puzzle_SOURCES          = 15-puzzle.c

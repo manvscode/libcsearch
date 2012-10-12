@@ -1,4 +1,4 @@
-/* Coded by Joe Marrero, October 6, 2012.
+/* Coded by Joe Marrero, October 10, 2012.
  * http://www.manvscode.com/
  */
 #include <stdlib.h>
@@ -9,14 +9,17 @@
 #include <libcollections/vector.h>
 #include <libcollections/hash-functions.h>
 
-#define BOARD_WIDTH   3
-#define BOARD_HEIGHT  3
+#define BOARD_WIDTH   4
+#define BOARD_HEIGHT  4
+
+
 
 
 const int GOAL_STATE[] = {
-	1, 2, 3,
-	4, 5, 6,
-	7, 8, 0
+	 1,  2,  3,  4,
+	 5,  6,  7,  8,
+	 9, 10, 11, 12,
+	13, 14, 15,  0
 };
 
 /*
@@ -113,8 +116,9 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 	else
 	{
 		/* Start with the goal */
-		int current_board[ BOARD_WIDTH * BOARD_HEIGHT ];
-		memcpy( current_board, GOAL_STATE, sizeof(int) * BOARD_WIDTH * BOARD_HEIGHT );
+		
+		int current_board[ width * height ];
+		memcpy( current_board, GOAL_STATE, sizeof(int) * width * height );
 
 		int potential_moves[ 4 ][ 2 ] = {
 			{ -1,  0 },
@@ -123,10 +127,10 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 			{  0,  1 },
 		};
 
-		/* Attempt to make 14 moves to scramble the goal state.
+		/* Attempt to make BOARD_HEIGHT * BOARD_WIDTH * 2 moves to scramble the goal state.
 		 * This new state will be the start state.
 		 */
-		int moves = 14;
+		int moves = BOARD_HEIGHT * BOARD_WIDTH * 2;
 		while( moves-- > 0 )
 		{
 			for( int y = 0; y < height; y++ )
@@ -147,7 +151,7 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 							int move_y = y + potential_moves[ m ][ 1 ];
 
 							if( move_x >= 0 && move_x < width &&
-									move_y >= 0 && move_y < height )
+		 					    move_y >= 0 && move_y < height )
 							{
 								/* make the move */	
 								size_t move_index = width * move_y + move_x;
@@ -165,11 +169,7 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
 		}
 
 		/* copy randomized board to the game board */
-		size_t len = width * height;
-		for( int i = 0; i < len; i++ )
-		{
-			board[ i ] = current_board[ i ];
-		}
+		memcpy( board, current_board, sizeof(int) * width * height );
 	}
 }
 
@@ -178,6 +178,7 @@ void randomize_board( int board[], size_t width, size_t height, bool only_solvab
  */
 int* create_state( int *board, size_t size, size_t index, size_t move_index )
 {
+	static size_t number_of_states = 0;
 	int* new_board = (int*) malloc( sizeof(int) * size );
 
 	if( new_board )
@@ -190,6 +191,12 @@ int* create_state( int *board, size_t size, size_t index, size_t move_index )
 
 		pvector_push( &states, new_board );
 	}
+
+	number_of_states++;
+
+	#ifdef DEBUG
+	printf( "Created New State (%ld)\n", number_of_states );
+	#endif
 
 	return new_board;
 }
@@ -282,11 +289,11 @@ void draw_board( int step, const int *board )
 
 			if( num )
 			{
-				printf( "|%d", num );
+				printf( "|%2d", num );
 			}
 			else
 			{
-				printf( "| " );
+				printf( "|  " );
 			}
 		}
 
@@ -300,8 +307,8 @@ void draw_board( int step, const int *board )
  */
 int heuristic( const void* restrict state1, const void* restrict state2 )
 {
-	int* board1 = (int*) state1;
-	int* board2 = (int*) state2;
+	int* restrict board1 = (int* restrict) state1;
+	int* restrict board2 = (int* restrict) state2;
 	int sum = 0;
 
 	for( int y1 = 0; y1 < BOARD_HEIGHT; y1++ )

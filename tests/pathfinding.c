@@ -58,8 +58,8 @@ int windowHeight;
 float tileWidth;
 float tileHeight;
 
-#define DEFAULT_GRIDWIDTH			200
-#define DEFAULT_GRIDHEIGHT			200
+#define DEFAULT_GRIDWIDTH		  	500
+#define DEFAULT_GRIDHEIGHT			500
 
 GLfloat grid[ 2 ][ 2 ][ 3 ] = {
 		{ {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
