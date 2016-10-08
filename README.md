@@ -18,11 +18,17 @@ Common Hueristics
 
 Screenshots
 =================
-![Combinatorial Search Screenshot 1](http://farm3.staticflickr.com/2558/3802832676_7598de369c_z.jpg "Combinatorial Search Screenshot 1")
+Path finding using best-first search:
+![Best-first Search Path Finding](screenshots/bfs-path-finding.jpg)
 
-![Combinatorial Search Screenshot 2](http://farm3.staticflickr.com/2523/3802017359_16de31dff3_z.jpg "Combinatorial Search Screenshot 2")
+Path finding using A* search:
+![A* Search Path Finding](screenshots/astar-path-finding.jpg)
 
-![Combinatorial Search Screenshot 3](http://farm3.staticflickr.com/2685/4122739897_1a01eca50c_z.jpg "Combinatorial Search Screenshot 3")
+Path finding in large graphs:
+![Path Finding in a Large Graph](screenshots/path-finding-large-graph.jpg)
+
+Path finding using a navigation mesh:
+![Navigation Meshes](screenshots/navigation-mesh-path-finding.jpg)
 
 Roadmap
 =================
