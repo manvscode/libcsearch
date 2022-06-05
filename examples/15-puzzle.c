@@ -22,10 +22,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <string.h>
 #include <csearch.h>
 #include <heuristics.h>
-#include <libcollections/vector.h>
-#include <libcollections/hash-functions.h>
+#include <collections/vector.h>
+#include <collections/hash-functions.h>
 
 #define BOARD_WIDTH   4
 #define BOARD_HEIGHT  4
@@ -44,7 +45,7 @@ const int GOAL_STATE[] = {
  * A collection of all of the game board
  * states that was a possibility.
  */
-lc_pvector_t states;
+int** states = NULL;
 
 static void randomize_board    ( int board[], size_t width, size_t height, bool only_solvable );
 static int* create_state       ( int *board, size_t size, size_t index, size_t move_index );
@@ -58,13 +59,13 @@ static int  board_compare      ( const void* restrict state1, const void* restri
 int main( int argc, char *argv[] )
 {
 	srand( time(NULL) );
-	pvector_create( &states, 100, malloc, free );
-	astar_t* p_astar = astar_create( board_compare, pointer_hash, heuristic, cost, get_possible_moves, malloc, free );
+	lc_vector_create( states, 100 );
+	astar_t* p_astar = astar_create( board_compare, lc_pointer_hash, heuristic, cost, get_possible_moves, malloc, free );
 
 	/* Produce a solvable random board */
 	int* initial_state = (int*) malloc( sizeof(int) * BOARD_WIDTH * BOARD_HEIGHT );
 	randomize_board( initial_state, BOARD_WIDTH, BOARD_HEIGHT, true );
-	pvector_push( &states, initial_state );
+	lc_vector_push( states, initial_state );
 
 
 	if( astar_find( p_astar, GOAL_STATE, initial_state ) )
@@ -94,13 +95,14 @@ int main( int argc, char *argv[] )
 	astar_destroy( &p_astar );
 
 	/* Release memory of all the possible states. */
-	while( pvector_size( &states ) > 0 )
+	while( lc_vector_size( states ) > 0 )
 	{
-		free( pvector_peek( &states ) );
-		pvector_pop( &states );
+		int* state = lc_vector_last( states );
+		free( state );
+		lc_vector_pop( states );
 	}
 
-	pvector_destroy( &states );
+	lc_vector_destroy( states );
 	return 0;
 }
 
@@ -206,7 +208,7 @@ int* create_state( int *board, size_t size, size_t index, size_t move_index )
 		new_board[ index ] = new_board[ move_index ];
 		new_board[ move_index ] = tmp;
 
-		pvector_push( &states, new_board );
+		lc_vector_push( states, new_board );
 	}
 
 	number_of_states++;

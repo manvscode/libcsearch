@@ -23,11 +23,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <libcollections/alloc.h>
-#include <libcollections/bheap.h>
-#include <libcollections/hash-map.h>
-#include <libcollections/tree-map.h>
-#include <libcollections/bench-mark.h>
+#include <collections/binary-heap.h>
+#include <collections/hash-map.h>
+#include <collections/tree-map.h>
+#include <collections/benchmark.h>
 #include "successors-private.h"
 #include "csearch.h"
 
@@ -38,13 +37,13 @@ struct bestfs_node {
 };
 
 struct bestfs_algorithm {
-	alloc_fxn alloc;
-	free_fxn  free;
+	alloc_fxn_t alloc;
+	free_fxn_t  free;
 
-	compare_fxn    compare;
-	heuristic_fxn  heuristic;
-	successors_fxn successors_of;
-	bestfs_node_t* node_path;
+	compare_fxn_t   compare;
+	heuristic_fxn_t heuristic;
+	successors_fxn_t successors_of;
+	bestfs_node_t*  node_path;
 
 	successors_t   successors;
 	lc_pbheap_t    open_list; /* list of bestfs_node_t* */
@@ -82,7 +81,7 @@ static int bestfs_heuristic_compare( const void* __restrict p_n1, const void* __
 
 
 
-bestfs_t* bestfs_create( compare_fxn compare, state_hash_fxn state_hasher, heuristic_fxn heuristic, successors_fxn successors_of, alloc_fxn alloc, free_fxn free )
+bestfs_t* bestfs_create( compare_fxn_t compare, state_hash_fxn_t state_hasher, heuristic_fxn_t heuristic, successors_fxn_t successors_of, alloc_fxn_t alloc, free_fxn_t free )
 {
 	bestfs_t* p_best = (bestfs_t*) alloc( sizeof(bestfs_t) );
 
@@ -139,14 +138,14 @@ void bestfs_destroy( bestfs_t** p_best )
 		hash_map_destroy( &(*p_best)->closed_list );
 		#endif
 
-		free_fxn _free = (*p_best)->free;
+		free_fxn_t _free = (*p_best)->free;
 		_free( *p_best );
 		*p_best = NULL;
 
 	}
 }
 
-void bestfs_set_compare_fxn( bestfs_t* p_best, compare_fxn compare )
+void bestfs_set_compare_fxn( bestfs_t* p_best, compare_fxn_t compare )
 {
 	if( p_best )
 	{
@@ -155,7 +154,7 @@ void bestfs_set_compare_fxn( bestfs_t* p_best, compare_fxn compare )
 	}
 }
 
-void bestfs_set_heuristic_fxn( bestfs_t* p_best, heuristic_fxn heuristic )
+void bestfs_set_heuristic_fxn( bestfs_t* p_best, heuristic_fxn_t heuristic )
 {
 	if( p_best )
 	{
@@ -164,7 +163,7 @@ void bestfs_set_heuristic_fxn( bestfs_t* p_best, heuristic_fxn heuristic )
 	}
 }
 
-void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn successors_of )
+void bestfs_set_successors_fxn( bestfs_t* p_best, successors_fxn_t successors_of )
 {
 	if( p_best )
 	{

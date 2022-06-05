@@ -23,7 +23,7 @@
 #include <assert.h>
 #include "list.h"
 
-void list_create( list_t *p_list, alloc_fxn alloc, free_fxn free )
+void list_create( list_t *p_list, alloc_fxn_t alloc, free_fxn_t free )
 {
 	assert( p_list );
 
@@ -253,14 +253,14 @@ void list_clear( list_t *p_list )
 	}
 }
 
-void list_alloc_set( list_t *p_list, alloc_fxn alloc )
+void list_alloc_set( list_t *p_list, alloc_fxn_t alloc )
 {
 	assert( p_list );
 	assert( alloc );
 	p_list->alloc = alloc;
 }
 
-void list_free_set( list_t *p_list, free_fxn free )
+void list_free_set( list_t *p_list, free_fxn_t free )
 {
 	assert( p_list );
 	assert( free );

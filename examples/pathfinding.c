@@ -20,16 +20,16 @@
  * THE SOFTWARE.
  */
 #ifdef __APPLE__
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
+# include <OpenGL/gl.h>
+# include <OpenGL/glu.h>
 #else
-#include <GL/gl.h>
-#include <GL/glu.h>
+# include <GL/gl.h>
+# include <GL/glu.h>
 #endif
 #include <GL/freeglut.h>
-#include <libcollections/types.h>
-#include <libcollections/hash-functions.h>
-#include <libcollections/vector.h>
+//#include <collections/types.h>
+#include <collections/hash-functions.h>
+#include <collections/vector.h>
 #include <csearch.h>
 #include <heuristics.h>
 #include <stdio.h>
@@ -178,9 +178,9 @@ static int pointer_compare( const void* left, const void* right )
 
 void initialize( void )
 {
-	pvector_create( &bestfs_path, 1, malloc, free );
-	pvector_create( &dijkstra_path, 1, malloc, free );
-	pvector_create( &astar_path, 1, malloc, free );
+	lc_vector_create( &bestfs_path, 1 );
+	lc_vector_create( &dijkstra_path, 1 );
+	lc_vector_create( &astar_path, 1 );
 
 	bfs      = bestfs_create   ( pointer_compare, pointer_hash, tile_manhattan_distance, tile_successors4, malloc, free );
 	dijkstra = dijkstra_create ( pointer_compare, pointer_hash, tile_positive_cost, tile_successors4, malloc, free );
@@ -241,7 +241,7 @@ void initialize( void )
 
 void deinitialize( void )
 {
-	pvector_destroy( &bestfs_path );
+	lc_vector_destroy( &bestfs_path );
 	pvector_destroy( &dijkstra_path );
 	pvector_destroy( &astar_path );
 

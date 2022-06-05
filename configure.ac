@@ -21,40 +21,36 @@ AH_BOTTOM([
 ])
 
 
-DFLAGS="$DFLAGS"
-#DFLAGS="-D DEBUG_BREADTH_FIRST_SEARCH -D DEBUG_DEPTH_FIRST_SEARCH -D DEBUG_BEST_FIRST_SEARCH -D DEBUG_DIJKSTRA -D DEBUG_ASTAR"
+#AC_CHECK_LIB([collections], [lc_hash_map_create],
+	#[have_collections=yes],
+	#[AC_MSG_ERROR([Missing libcollections library (i.e. -lcollections).])]
+#)
 
-#CFLAGS="-std=c99 -Wall -pedantic -g -ggdb -O0 $DFLAGS -I/usr/local/include"
-CFLAGS="$CFLAGS "
-LDFLAGS="$LDFLAGS -lcollections"
 
 AM_PROG_AR
+LT_INIT([shared static])
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
-LT_INIT([shared static])
-
-AC_ARG_ENABLE([tests],
-	[AS_HELP_STRING([--disable-tests], [Enable test programs.])],
-	[:],
-	[enable_tests=no])
-
-AM_CONDITIONAL([ENABLE_TESTS], [test "$enable_tests" = "yes"])
-
-
-
 AC_PROG_INSTALL
 
-echo " ------------------------------ "
-echo ""
-echo "  CFLAGS = $CFLAGS"
-echo " LDFLAGS = $LDFLAGS"
-echo ""
-echo " ------------------------------ "
+AC_ARG_ENABLE([examples],
+	[AS_HELP_STRING([--disable-examples], [Enable example programs.])],
+	[:],
+	[enable_examples=no])
+
+AM_CONDITIONAL([ENABLE_EXAMPLES], [test "$enable_examples" = "yes"])
+
+
+PKG_CHECK_MODULES([COLLECTIONS], [collections-static],
+	[AC_MSG_NOTICE([Found libcollections])],
+	[AC_MSG_ERROR([Missing libcollections])],
+)
+
 
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
-	tests/Makefile
+	examples/Makefile
 ])
 
 AC_OUTPUT

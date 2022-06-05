@@ -23,13 +23,12 @@
 #define _SUCCESSORS_H_
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-#include <libcollections/types.h>
-#include <libcollections/alloc.h>
+#include <collections/alloc.h>
 #include "csearch.h"
 
 /*
@@ -37,15 +36,15 @@ extern "C" {
  * successors does not own the states.
  */
 struct successors {
-	alloc_function  alloc;
-	free_function   free;
+	alloc_fxn_t alloc;
+	free_fxn_t free;
 	size_t array_size;
 	size_t size;
 
 	void** array;
 };
 
-bool successors_create  ( successors_t *p_successors, size_t size, alloc_function alloc, free_function free );
+bool successors_create  ( successors_t *p_successors, size_t size, alloc_fxn_t alloc, free_fxn_t free );
 void successors_destroy ( successors_t *p_successors );
 
 #define successors_array( p_successors )       ((p_successors)->array)
@@ -68,5 +67,5 @@ static __inline void successors_set( successors_t* __restrict p_successors, size
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 #endif /* _SUCCESSORS_H_ */

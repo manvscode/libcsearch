@@ -30,7 +30,7 @@
  * successors - A growable array of states.
  * successors does not own the states.
  */
-bool successors_create( successors_t* p_successors, size_t size, alloc_function alloc, free_function free )
+bool successors_create( successors_t* p_successors, size_t size, alloc_fxn_t alloc, free_fxn_t free )
 {
 	assert( p_successors );
 

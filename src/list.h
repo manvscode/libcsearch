@@ -23,7 +23,7 @@
 #define _LIST_H_
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 #include <stddef.h>
 #include "csearch.h"
@@ -32,8 +32,8 @@ typedef int (*list_element_function)( void *element );
 
 typedef struct list_node {
 	void* data;
-	struct list_node* next;	
-	struct list_node* prev;	
+	struct list_node* next;
+	struct list_node* prev;
 } list_node_t;
 
 typedef struct list {
@@ -41,13 +41,13 @@ typedef struct list {
 	list_node_t* tail;
 	size_t size;
 
-	alloc_fxn  alloc;
-	free_fxn   free;
+	alloc_fxn_t  alloc;
+	free_fxn_t   free;
 } list_t;
 
 typedef list_node_t* list_iterator_t;
 
-void list_create        ( list_t *p_list, alloc_fxn alloc, free_fxn free );
+void list_create        ( list_t *p_list, alloc_fxn_t alloc, free_fxn_t free );
 void list_destroy       ( list_t *p_list );
 int  list_insert_front  ( list_t *p_list, const void *data ); /* O(1) */
 int  list_remove_front  ( list_t *p_list ); /* O(1) */
@@ -57,8 +57,8 @@ int  list_insert_next   ( list_t *p_list, list_node_t *p_front_node, const void 
 int  list_remove_next   ( list_t *p_list, list_node_t *p_front_node ); /* O(1) */ 
 void list_clear         ( list_t *p_list ); /* O(N) */
 
-void list_alloc_set     ( list_t *p_list, alloc_fxn alloc );
-void list_free_set      ( list_t *p_list, free_fxn free );
+void list_alloc_set     ( list_t *p_list, alloc_fxn_t alloc );
+void list_free_set      ( list_t *p_list, free_fxn_t free );
 
 list_iterator_t list_begin    ( const list_t *p_list );
 list_iterator_t list_rbegin   ( const list_t *p_list );
